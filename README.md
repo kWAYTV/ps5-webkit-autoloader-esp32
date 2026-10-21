@@ -11,7 +11,7 @@ Default chain is poops when both are valid.
 
 ## Flash
 
-Hold **BOOT**, plug into a PC, then use the [web flasher](https://kwaytv.github.io/ps5-webkit-autoloader-esp32/) (Chrome / Edge) or write a [release](https://github.com/kWAYTV/ps5-webkit-autoloader-esp32/releases/latest) merged bin at `0x0`.
+Hold **BOOT**, plug into a PC, then use the [web flasher](https://percdotdev.github.io/ps5-webkit-autoloader-esp32/) (Chrome / Edge) or write a [release](https://github.com/percdotdev/ps5-webkit-autoloader-esp32/releases/latest) merged bin at `0x0`.
 
 | Board | Image |
 | --- | --- |
