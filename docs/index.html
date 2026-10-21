@@ -126,7 +126,7 @@
   </footer>
 
   <script type="module">
-    import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.5/bundle.js";
+    import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.7.0/bundle.js";
 
     const FILES = {
       "ESP32": "firmware/esp32-arduino.pico.merged.bin",
@@ -174,6 +174,7 @@
         fail: "Flash failed. Hold BOOT, replug, try again.",
         abort: "Cancelled.",
         noport: "No port selected.",
+        native: "Native USB — no DTR/RTS. Already in download mode, skipping reset.",
       },
       es: {
         skip: "Saltar al paso",
@@ -212,6 +213,7 @@
         fail: "Falló el flasheo. Mantén BOOT, vuelve a enchufar e inténtalo.",
         abort: "Cancelado.",
         noport: "No se eligió puerto.",
+        native: "USB nativo — sin DTR/RTS. Ya en modo descarga, sin reset.",
       },
     };
 
@@ -436,12 +438,17 @@
       el.scrollTop = el.scrollHeight;
     }
 
-    function toBin(u8) {
-      const parts = [];
-      for (let i = 0; i < u8.length; i += 0x2000) {
-        parts.push(String.fromCharCode.apply(null, u8.subarray(i, i + 0x2000)));
-      }
-      return parts.join("");
+    function ignoreMissingSignals(transport) {
+      const wrap = (fn) => async function (...args) {
+        try { return await fn.apply(this, args); }
+        catch (err) {
+          if (String(err).includes("control signals")) return;
+          throw err;
+        }
+      };
+      transport.setRTS = wrap(transport.setRTS);
+      transport.setDTR = wrap(transport.setDTR);
+      transport.setSignals = wrap(transport.setSignals);
     }
 
     async function loadFirmware(path, onProg) {
@@ -497,7 +504,9 @@
           throw err;
         }
 
-        transport = new Transport(port, true);
+        const nativeUsb = port.getInfo().usbVendorId === 0x303a;
+        transport = new Transport(port, false);
+        ignoreMissingSignals(transport);
         const loader = new ESPLoader({
           transport,
           baudrate: 115200,
@@ -510,7 +519,16 @@
         });
 
         st.textContent = t("sync");
-        const chip = await loader.main();
+        if (nativeUsb) logLine(t("native"));
+        let chip;
+        try {
+          chip = await loader.main(nativeUsb ? "no_reset" : "default_reset");
+        } catch (err) {
+          if (!String(err).includes("control signals")) throw err;
+          logLine(t("native"));
+          try { await transport.disconnect(); } catch { /* already closed */ }
+          chip = await loader.main("no_reset");
+        }
         const name = loader.chip?.CHIP_NAME || chip || CHIP_OF[state.board];
         logLine(`${t("chip")}: ${name}`);
         let key = name;
@@ -521,10 +539,9 @@
 
         const data = await loadFirmware(path, setBar);
         logLine(`${data.byteLength} B`);
-        try { await loader.changeBaud(921600); } catch { /* native USB can ignore this */ }
 
         await loader.writeFlash({
-          fileArray: [{ data: toBin(data), address: 0 }],
+          fileArray: [{ data, address: 0 }],
           flashSize: "4MB",
           flashMode: "dio",
           flashFreq: "40m",
@@ -534,7 +551,7 @@
             setBar(40 + (written / total) * 60);
           },
         });
-        try { await loader.after("hard_reset"); } catch { /* release firmware drops USB */ }
+        try { await loader.after("no_reset"); } catch { /* S2 CDC cannot leave download mode over USB */ }
         setBar(100);
         state.flashed = true;
         st.className = "status ok";
