@@ -64,6 +64,12 @@ jobs:
       - name: Build mklittlefs
         run: make -C mklittlefs
 
+      - name: Record payload version
+        run: |
+          base=$(grep -E '#define[[:space:]]+WKAL_VERSION' webkit-autoloader/include/wkali.h | awk '{print $3}' | tr -d '"\r')
+          sha=$(git -C webkit-autoloader rev-parse --short HEAD)
+          echo "${base} (${sha})" | tee payload-version.txt
+
       - name: Pack srbraboo payload
         run: bash ./tools/pack_srbraboo.sh
 
@@ -79,6 +85,7 @@ jobs:
             build/s2/esp32-arduino.s2.merged.bin
             build/s3/esp32-arduino.s3.merged.bin
             build/c3/esp32-arduino.c3.merged.bin
+            payload-version.txt
 
   release:
     needs: firmware
@@ -100,14 +107,23 @@ jobs:
           set -euo pipefail
           mkdir -p release
           find bins -name '*.merged.bin' -exec cp -f {} release/ \;
+          PAYLOAD="$(tr -d '[:space:]' < bins/payload-version.txt 2>/dev/null || echo unknown)"
+          TITLE="srbraboo ${PAYLOAD}"
+          NOTES="$(cat <<EOF
+srbraboo/ps5-webkit-autoloader \`${PAYLOAD}\`
+
+Flash the merged bin for your chip at \`0x0\`. S2: \`esp32-arduino.s2.merged.bin\`.
+EOF
+)"
           ls -lh release
           if gh release view latest --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release edit latest --repo "${{ github.repository }}" --title "$TITLE" --notes "$NOTES"
             gh release upload latest --repo "${{ github.repository }}" --clobber release/*.merged.bin
           else
             gh release create latest \
               --repo "${{ github.repository }}" \
-              --title "latest" \
-              --notes "Merged 4 MB images. Flash at 0x0. S2: \`esp32-arduino.s2.merged.bin\`." \
+              --title "$TITLE" \
+              --notes "$NOTES" \
               release/*.merged.bin
           fi
 
