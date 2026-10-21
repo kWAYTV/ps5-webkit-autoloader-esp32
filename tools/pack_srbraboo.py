@@ -94,7 +94,7 @@ def main() -> int:
              "third_party/ps5-webkit-remote-loader"], cwd=web)
         # download_deps.sh uses `git describe --tags`. Actions submodule
         # checkouts omit tags, so describe falls back to 915a65e and 404s.
-        run(["git", "fetch", "--tags", "--force"],
+        run(["git", "fetch", "--tags", "--force", "--no-recurse-submodules"],
             cwd=web / "third_party" / "ps5-unified-autoloader")
         if os.name == "nt":
             bash = Path(r"C:\Program Files\Git\bin\bash.exe")
