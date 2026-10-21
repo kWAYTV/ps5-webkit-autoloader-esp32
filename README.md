@@ -37,6 +37,15 @@ Install the Arduino CLI and required core:
 ./install-deps.sh
 ```
 
+This fork packs [srbraboo/ps5-webkit-autoloader](https://github.com/srbraboo/ps5-webkit-autoloader) into LittleFS. GitHub Actions builds all 4 MB merged images. Locally:
+
+```sh
+python3 tools/pack_srbraboo.py --web /path/to/ps5-webkit-autoloader
+make s2
+```
+
+The S2 image is `build/s2/esp32-arduino.s2.merged.bin`. User's Guide paths under `/document` are served as the installer (no IP redirect loop). Use Arduino-ESP32 2.0.11's `mklittlefs`, not a 4.x build.
+
 ## Build
 
 ```sh

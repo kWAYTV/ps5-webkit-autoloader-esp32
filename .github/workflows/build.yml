@@ -1,0 +1,44 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Checkout srbraboo/ps5-webkit-autoloader
+        uses: actions/checkout@v4
+        with:
+          repository: srbraboo/ps5-webkit-autoloader
+          path: webkit-autoloader
+          submodules: recursive
+
+      - name: Install Arduino CLI and ESP32 2.0.11
+        run: ./install-deps.sh
+
+      - name: Build project mklittlefs
+        run: make -C mklittlefs
+
+      - name: Pack srbraboo autoloader
+        run: ./tools/pack_srbraboo.sh
+
+      - name: Build ESP32 images
+        run: make
+
+      - name: Upload merged bins
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-srbraboo-bins
+          path: |
+            build/pico/esp32-arduino.pico.merged.bin
+            build/s2/esp32-arduino.s2.merged.bin
+            build/s3/esp32-arduino.s3.merged.bin
+            build/c3/esp32-arduino.c3.merged.bin

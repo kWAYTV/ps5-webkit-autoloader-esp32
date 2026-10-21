@@ -383,34 +383,38 @@ esp_err_t httpsFileHandler(httpd_req_t *req)
         if (file)
             file.close();
 
-        Serial.printf("[HTTPS] 404: %s", path.c_str());
-
-        if (path.startsWith("/document/") && path.indexOf("/ps5") >= 0)
+        if (path.startsWith("/document"))
         {
-            Serial.printf(" | Redirect: %s -> %s\n", path.c_str(), PORTAL_REDIRECT_URL);
-
-            httpd_resp_set_status(req, "302 Found");
-            httpd_resp_set_hdr(req, "Location", PORTAL_REDIRECT_URL);
-            httpd_resp_set_hdr(req, "Connection", "close");
-            httpd_resp_send(req, nullptr, 0);
-            // The redirect is complete; release the TLS session immediately.
-            return ESP_FAIL;
+            Serial.printf("[HTTPS] User's Guide %s -> /index.html\n", path.c_str());
+            if (file)
+                file.close();
+            path = "/index.html";
+            gzip = false;
+            gzPath = path + ".gz";
+            gzFile = LittleFS.open(gzPath, "r");
+            if (isRegularFile(gzFile))
+            {
+                file = gzFile;
+                gzip = true;
+            }
+            else
+            {
+                if (gzFile)
+                    gzFile.close();
+                file = LittleFS.open(path, "r");
+            }
         }
-        else
-        {
-            Serial.print("\n");
+    }
 
-            httpd_resp_set_status(req, "404 Not Found");
-            httpd_resp_set_type(req, "text/plain");
-            httpd_resp_send(req, "404 Not Found", HTTPD_RESP_USE_STRLEN);
-        }
-/*
-        Serial.printf("[HTTPS] 302: %s\n", path.c_str());
-        httpd_resp_set_status(req, "302 Found");
-        httpd_resp_set_hdr(req, "Location", PORTAL_REDIRECT_URL);
-        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-        httpd_resp_send(req, nullptr, 0);
-*/
+    if (!isRegularFile(file))
+    {
+        if (file)
+            file.close();
+
+        Serial.printf("[HTTPS] 404: %s\n", path.c_str());
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_set_type(req, "text/plain");
+        httpd_resp_send(req, "404 Not Found", HTTPD_RESP_USE_STRLEN);
         return ESP_OK;
     }
 
@@ -794,27 +798,27 @@ void httpFileHandler()
         if (file)
             file.close();
 
-        Serial.printf("[HTTP] 404: %s", path.c_str());
-
-        if (path.startsWith("/document/") && (path.indexOf("/ps5") >= 0 || path.indexOf("/ps4") >= 0))
+        if (path.startsWith("/document"))
         {
-            Serial.printf(" | Redirect: %s -> %s\n", path.c_str(), PORTAL_REDIRECT_URL);
-
-            webServer.sendHeader("Location", PORTAL_REDIRECT_URL, true);
-            webServer.send(302, "text/plain", "");
+            Serial.printf("[HTTP] User's Guide %s -> /index.html\n", path.c_str());
+            path = "/index.html";
+            gzip = false;
+            gzPath = path + ".gz";
+            file = LittleFS.open(gzPath, "r");
+            if (file && !file.isDirectory())
+                gzip = true;
+            else
+                file = LittleFS.open(path, "r");
         }
-        else
-        {
-            Serial.print("\n");
+    }
 
-            webServer.send(404, "text/plain", "404 Not Found");
-        }
-/*
-        Serial.printf("[HTTP] 302: %s\n", path.c_str());
-        webServer.sendHeader("Location", PORTAL_REDIRECT_URL, true);
-        webServer.sendHeader("Cache-Control", "no-store");
-        webServer.send(302, "text/plain", "");
-*/
+    if (!file || file.isDirectory())
+    {
+        if (file)
+            file.close();
+
+        Serial.printf("[HTTP] 404: %s\n", path.c_str());
+        webServer.send(404, "text/plain", "404 Not Found");
         return;
     }
 

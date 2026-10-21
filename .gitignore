@@ -1,5 +1,6 @@
 /build
 /data
+/dist
 /*.crt
 /*.key
 /server_certs.h
@@ -9,7 +10,7 @@ __pycache__/
 *.elf
 *.bak
 /slopkit.*
-/autoloader-*
+/autoloader-externalize-backup/
 /*.mini/
 /henloader/
 replace_autoloader_elf.py
