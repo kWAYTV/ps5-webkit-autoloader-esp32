@@ -145,36 +145,36 @@
         stepsNav: "Steps",
         next: "Next",
         back: "Back",
-        t0: "Use Chrome or Edge",
-        p0: "Web Serial only works in Chromium, over HTTPS. Firefox and Safari cannot flash.",
-        ok0: "This browser can talk to the serial port.",
-        no0: "This browser has no Web Serial. Open this page in Chrome or Edge.",
-        t1: "Pick the chip on the board",
-        p1: "Wrong image usually still connects, then fails to boot. TENSTAR S2 Mini is ESP32-S2.",
-        t2: "Enter download mode",
-        p2: "Unplug the board. Hold BOOT. Plug a data cable into the PC. Keep holding about 2 seconds, then release.",
-        t3: "Write the 4 MB image",
-        p3: "Connect, then the bar and log show the write. After reset the USB port often vanishes. That is the release firmware, not a failed flash.",
+        t0: "Chrome or Edge",
+        p0: "Firefox and Safari cannot flash.",
+        ok0: "This browser works.",
+        no0: "Open this page in Chrome or Edge.",
+        t1: "Which board?",
+        p1: "TENSTAR S2 Mini = ESP32-S2.",
+        t2: "Download mode",
+        p2: "Unplug. Hold BOOT. Plug into the PC. Hold 2 seconds, then let go.",
+        t3: "Flash",
+        p3: "USB vanishing after the write is normal. Then unplug and move it to the PS5.",
         connect: "Connect & flash",
         flashing: "Writing…",
-        t4: "Join the SoftAP",
-        p4: "Unplug from the PC and plug into the PS5. On the console, join ESP32_PORTAL with password 12345678. Stay on that network.",
-        p4b: "Relapse needs an IP. The SoftAP assigns one. There is no internet, and none is required. Poops does not need a network interface.",
-        t5: "Open the User’s Guide",
-        p5: "Settings → Guide & Tips → User’s Guide. Wait for cache and install. Leave the ESP32 plugged in.",
-        p5b: "Later boots: Media → WebKit Autoloader. Still on ESP32_PORTAL.",
-        p5c: "poops 7.00–12.00. relapse 7.00–13.60 except 9.05 and 11.40.",
-        idle: "Waiting.",
-        fetch: "Fetching firmware…",
-        sync: "Syncing with the chip…",
+        t4: "PS5 Wi-Fi",
+        p4: "Plug into the PS5. Join ESP32_PORTAL / 12345678. Stay on it.",
+        p4b: "Relapse needs that Wi-Fi for an IP — not internet. Poops does not care.",
+        t5: "User’s Guide",
+        p5: "Settings → Guide & Tips → User’s Guide. Wait. Leave the ESP32 plugged in.",
+        p5b: "Next time: Media → WebKit Autoloader.",
+        p5c: "poops 7.00–12.00 · relapse 7.00–13.60 (not 9.05 / 11.40)",
+        idle: "Ready.",
+        fetch: "Loading firmware…",
+        sync: "Talking to the chip…",
         chip: "Chip",
         using: "Image",
-        mismatch: "Connected chip differs from the selection. Using the image for the detected chip.",
-        done: "Write finished. Unplug and move the board to the PS5.",
-        fail: "Flash failed. Hold BOOT, replug, try again.",
+        mismatch: "Flashing the chip that connected, not the one you picked.",
+        done: "Done. Unplug, then PS5.",
+        fail: "Failed. Hold BOOT and plug in again.",
         abort: "Cancelled.",
         noport: "No port selected.",
-        native: "Native USB — no DTR/RTS. Already in download mode, skipping reset.",
+        native: "Native USB. Skipping reset.",
       },
       es: {
         skip: "Saltar al paso",
@@ -184,36 +184,36 @@
         stepsNav: "Pasos",
         next: "Siguiente",
         back: "Atrás",
-        t0: "Usa Chrome o Edge",
-        p0: "Web Serial solo funciona en Chromium, por HTTPS. Firefox y Safari no pueden flashear.",
-        ok0: "Este navegador puede usar el puerto serie.",
-        no0: "Este navegador no tiene Web Serial. Abre esta página en Chrome o Edge.",
-        t1: "Elige el chip de la placa",
-        p1: "La imagen incorrecta suele conectar y luego no arranca. El TENSTAR S2 Mini es ESP32-S2.",
-        t2: "Entra en modo descarga",
-        p2: "Desenchufa la placa. Mantén BOOT. Conecta un cable de datos al PC. Sigue pulsando unos 2 segundos y suelta.",
-        t3: "Escribe la imagen de 4 MB",
-        p3: "Conecta; la barra y el registro muestran la escritura. Tras el reset el USB suele desaparecer. Es el firmware de release, no un fallo.",
+        t0: "Chrome o Edge",
+        p0: "Firefox y Safari no pueden flashear.",
+        ok0: "Este navegador vale.",
+        no0: "Abre esta página en Chrome o Edge.",
+        t1: "¿Qué placa?",
+        p1: "TENSTAR S2 Mini = ESP32-S2.",
+        t2: "Modo descarga",
+        p2: "Desenchufa. Mantén BOOT. Enchufa al PC. 2 segundos y suelta.",
+        t3: "Flasheo",
+        p3: "Si el USB desaparece al terminar, es normal. Luego a la PS5.",
         connect: "Conectar y flashear",
         flashing: "Escribiendo…",
-        t4: "Únete al SoftAP",
-        p4: "Desenchufa del PC y enchufa a la PS5. En la consola, entra a ESP32_PORTAL con la clave 12345678. Quédate en esa red.",
-        p4b: "Relapse necesita una IP. El SoftAP se la da. No hay internet y no hace falta. Poops no necesita interfaz de red.",
-        t5: "Abre la Guía del usuario",
-        p5: "Ajustes → Guía y consejos → Guía del usuario. Espera a la caché y la instalación. No desconectes el ESP32.",
-        p5b: "Arranques siguientes: Media → WebKit Autoloader. Sigue en ESP32_PORTAL.",
-        p5c: "poops 7.00–12.00. relapse 7.00–13.60 excepto 9.05 y 11.40.",
-        idle: "En espera.",
-        fetch: "Descargando firmware…",
-        sync: "Sincronizando con el chip…",
+        t4: "Wi-Fi de la PS5",
+        p4: "Enchufa a la PS5. Entra a ESP32_PORTAL / 12345678. Quédate ahí.",
+        p4b: "Relapse usa ese Wi-Fi por la IP, no por internet. Poops da igual.",
+        t5: "Guía del usuario",
+        p5: "Ajustes → Guía y consejos → Guía del usuario. Espera. No desconectes el ESP32.",
+        p5b: "La próxima vez: Media → WebKit Autoloader.",
+        p5c: "poops 7.00–12.00 · relapse 7.00–13.60 (no 9.05 / 11.40)",
+        idle: "Listo.",
+        fetch: "Cargando firmware…",
+        sync: "Hablando con el chip…",
         chip: "Chip",
         using: "Imagen",
-        mismatch: "El chip conectado no coincide con la selección. Se usa la imagen del chip detectado.",
-        done: "Escritura lista. Desenchufa y pasa la placa a la PS5.",
-        fail: "Falló el flasheo. Mantén BOOT, vuelve a enchufar e inténtalo.",
+        mismatch: "Se flashea el chip conectado, no el que elegiste.",
+        done: "Listo. Desenchufa y ve a la PS5.",
+        fail: "Falló. Mantén BOOT y vuelve a enchufar.",
         abort: "Cancelado.",
         noport: "No se eligió puerto.",
-        native: "USB nativo — sin DTR/RTS. Ya en modo descarga, sin reset.",
+        native: "USB nativo. Sin reset.",
       },
     };
 
@@ -454,23 +454,10 @@
     async function loadFirmware(path, onProg) {
       const res = await fetch(path);
       if (!res.ok) throw new Error(`${path} (${res.status})`);
-      const total = Number(res.headers.get("content-length")) || 0;
-      if (!res.body || !total) {
-        const buf = new Uint8Array(await res.arrayBuffer());
-        onProg(100);
-        return buf;
-      }
-      const out = new Uint8Array(total);
-      const reader = res.body.getReader();
-      let n = 0;
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        out.set(value, n);
-        n += value.length;
-        onProg((n / total) * 40);
-      }
-      return out.subarray(0, n);
+      onProg(10);
+      const buf = new Uint8Array(await res.arrayBuffer());
+      onProg(40);
+      return buf;
     }
 
     async function flash() {
