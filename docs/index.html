@@ -3,57 +3,570 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PS5 WebKit Autoloader · ESP32</title>
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#171717">
+  <title>PS5 WebKit Autoloader</title>
   <style>
-    :root { color-scheme: dark; --fg: #e8edf2; --muted: #8b99a8; --line: #243040; --bg: #0b1016; --card: #121922; }
+    :root {
+      --bg: #171717;
+      --fg: #f2f2f2;
+      --dim: #8d8d8d;
+      --line: #2c2c2c;
+      --well: #101010;
+      --ok: #f2f2f2;
+      --err: #c8c8c8;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
-    main { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
-    h1 { font-size: 1.35rem; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 0.35rem; }
-    h2 { font-size: 0.95rem; margin: 1.75rem 0 0.6rem; }
-    p, li { color: var(--muted); }
-    ol { padding-left: 1.2rem; }
-    li { margin: 0.35rem 0; }
-    kbd { color: var(--fg); background: #1b2430; border: 1px solid var(--line); border-radius: 4px; padding: 0.05rem 0.35rem; font: inherit; font-size: 0.9em; }
-    code { color: var(--fg); font-size: 0.9em; }
-    a { color: #7eb6ff; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; margin: 1.25rem 0; }
-    .flash { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
-    esp-web-install-button { display: inline-flex; }
-    .hint { font-size: 0.85rem; margin: 0.75rem 0 0; }
-    footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--muted); }
-    footer a { color: inherit; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); }
+    body {
+      font: 15px/1.5 ui-monospace, "Cascadia Mono", "Segoe UI Mono", "SF Mono", Consolas, monospace;
+      padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    a { color: inherit; }
+    a:hover { text-decoration-thickness: 2px; }
+    :focus { outline: none; }
+    :focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+    .skip {
+      position: absolute; left: -999px; top: 8px;
+    }
+    .skip:focus { left: 20px; background: var(--bg); padding: 4px 8px; z-index: 2; }
+    header {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+      max-width: 34rem; margin: 0 auto 28px;
+    }
+    .brand { font-size: 14px; text-decoration: none; }
+    .brand:hover { text-decoration: underline; }
+    .langs { display: flex; gap: 4px; }
+    .langs button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+    nav { max-width: 34rem; margin: 0 auto 28px; }
+    .track {
+      display: flex; align-items: center; gap: 0; list-style: none; margin: 0; padding: 0;
+    }
+    .track li { display: contents; }
+    .tick {
+      appearance: none; min-width: 36px; min-height: 36px; padding: 0 8px;
+      border: 1px solid var(--fg); background: transparent; color: var(--fg);
+      font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer;
+    }
+    .tick[aria-current="step"] { background: var(--fg); color: var(--bg); }
+    .tick:disabled { opacity: 0.35; cursor: not-allowed; }
+    .rail { flex: 1; height: 1px; background: var(--line); min-width: 8px; }
+    main { max-width: 34rem; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 600; line-height: 1.25; margin: 0 0 12px; text-wrap: balance; }
+    p, li { color: var(--dim); }
+    p { margin: 0 0 12px; }
+    strong, kbd, code { color: var(--fg); font-weight: 600; }
+    kbd, code {
+      font: inherit; border: 1px solid var(--line); padding: 0 5px;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 0; }
+    button.act, a.act {
+      appearance: none; display: inline-flex; align-items: center; justify-content: center;
+      min-height: 44px; padding: 0 16px; border: 1px solid var(--fg);
+      background: var(--fg); color: var(--bg); font: inherit; cursor: pointer;
+      text-decoration: none;
+    }
+    button.act.ghost, a.act.ghost { background: transparent; color: var(--fg); }
+    button.act:hover, a.act:hover { filter: brightness(1.08); }
+    button.act:disabled { opacity: 0.35; cursor: not-allowed; filter: none; }
+    .boards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0 0; }
+    .boards label {
+      display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px;
+      border: 1px solid var(--line); color: var(--fg); cursor: pointer;
+    }
+    .boards label:hover, .boards label:has(:focus-visible) { border-color: var(--fg); }
+    .boards input { accent-color: var(--fg); }
+    .meter { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin: 16px 0 8px; }
+    .bar { height: 4px; background: var(--line); }
+    .bar > i { display: block; height: 100%; width: 0; background: var(--fg); }
+    .pct { font-variant-numeric: tabular-nums; color: var(--fg); font-size: 13px; }
+    .log {
+      margin: 0; min-height: 7.5rem; max-height: 12.5rem; overflow: auto; padding: 10px 12px;
+      background: var(--well); border: 1px solid var(--line);
+      color: var(--dim); font-size: 12px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+    .status { min-height: 1.4em; margin: 10px 0 0; font-size: 13px; }
+    .status.bad { color: var(--err); }
+    .status.ok { color: var(--ok); }
+    footer { max-width: 34rem; margin: 40px auto 0; color: var(--dim); font-size: 12px; }
+    footer a { color: var(--dim); }
+    @media (max-width: 520px) {
+      .boards { grid-template-columns: 1fr; }
+      h1 { font-size: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bar > i { transition: none; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .bar > i { transition: width 80ms linear; }
+      main { animation: in 140ms ease-out; }
+    }
+    @keyframes in { from { opacity: 0; } to { opacity: 1; } }
   </style>
-  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
 </head>
 <body>
-  <main>
-    <h1>PS5 WebKit Autoloader</h1>
-    <p>Flash a 4&nbsp;MB merged image, then serve srbraboo’s autoloader from the ESP32 SoftAP.</p>
-
-    <div class="card">
-      <div class="flash">
-        <esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
-        <span class="hint">Chrome or Edge. Hold <kbd>BOOT</kbd>, plug USB, then connect.</span>
-      </div>
-      <p class="hint">The chip is detected automatically. After flash, USB serial drops — that is expected. Unplug and move the board to the PS5.</p>
+  <a class="skip" href="#stage" data-i18n="skip">Skip to step</a>
+  <header>
+    <a class="brand" href="./">PS5 WebKit Autoloader</a>
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" class="act ghost" data-set-lang="en" aria-pressed="true">EN</button>
+      <button type="button" class="act ghost" data-set-lang="es" aria-pressed="false">ES</button>
     </div>
+  </header>
+  <nav id="stepnav" aria-label="Steps">
+    <ol class="track" id="track"></ol>
+  </nav>
+  <main id="stage" tabindex="-1"></main>
+  <footer>
+    <a href="https://github.com/kWAYTV/ps5-webkit-autoloader-esp32" data-i18n="source">Source</a>
+    ·
+    <a href="https://github.com/kWAYTV/ps5-webkit-autoloader-esp32/releases/latest" data-i18n="bins">Bins</a>
+  </footer>
 
-    <h2>On the PS5</h2>
-    <ol>
-      <li>Join <code>ESP32_PORTAL</code> / <code>12345678</code>.</li>
-      <li>Open <strong>Settings → Guide &amp; Tips → User’s Guide</strong>.</li>
-      <li>Wait for cache and install. Leave the ESP32 plugged in.</li>
-      <li>Later boots: Media → <strong>WebKit Autoloader</strong>. Stay on the SoftAP.</li>
-    </ol>
-    <p>Relapse needs an IP on the PS5. The SoftAP provides it. No internet. Poops does not need a network interface.</p>
-    <p>poops 7.00–12.00 · relapse 7.00–13.60 except 9.05 / 11.40</p>
+  <script type="module">
+    import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.5/bundle.js";
 
-    <footer>
-      <a href="https://github.com/kWAYTV/ps5-webkit-autoloader-esp32">Source</a>
-      · <a href="https://github.com/kWAYTV/ps5-webkit-autoloader-esp32/releases/latest">Releases</a>
-      · owendswang · srbraboo · itsPLK · slopkit · Relapse · ESP Web Tools
-    </footer>
-  </main>
+    const FILES = {
+      "ESP32": "firmware/esp32-arduino.pico.merged.bin",
+      "ESP32-S2": "firmware/esp32-arduino.s2.merged.bin",
+      "ESP32-S3": "firmware/esp32-arduino.s3.merged.bin",
+      "ESP32-C3": "firmware/esp32-arduino.c3.merged.bin",
+    };
+    const CHIP_OF = { pico: "ESP32", s2: "ESP32-S2", s3: "ESP32-S3", c3: "ESP32-C3" };
+
+    const I = {
+      en: {
+        skip: "Skip to step",
+        source: "Source",
+        bins: "Bins",
+        steps: ["Browser", "Board", "Boot", "Flash", "Wi-Fi", "Guide"],
+        stepsNav: "Steps",
+        next: "Next",
+        back: "Back",
+        t0: "Use Chrome or Edge",
+        p0: "Web Serial only works in Chromium, over HTTPS. Firefox and Safari cannot flash.",
+        ok0: "This browser can talk to the serial port.",
+        no0: "This browser has no Web Serial. Open this page in Chrome or Edge.",
+        t1: "Pick the chip on the board",
+        p1: "Wrong image usually still connects, then fails to boot. TENSTAR S2 Mini is ESP32-S2.",
+        t2: "Enter download mode",
+        p2: "Unplug the board. Hold BOOT. Plug a data cable into the PC. Keep holding about 2 seconds, then release.",
+        t3: "Write the 4 MB image",
+        p3: "Connect, then the bar and log show the write. After reset the USB port often vanishes. That is the release firmware, not a failed flash.",
+        connect: "Connect & flash",
+        flashing: "Writing…",
+        t4: "Join the SoftAP",
+        p4: "Unplug from the PC and plug into the PS5. On the console, join ESP32_PORTAL with password 12345678. Stay on that network.",
+        p4b: "Relapse needs an IP. The SoftAP assigns one. There is no internet, and none is required. Poops does not need a network interface.",
+        t5: "Open the User’s Guide",
+        p5: "Settings → Guide & Tips → User’s Guide. Wait for cache and install. Leave the ESP32 plugged in.",
+        p5b: "Later boots: Media → WebKit Autoloader. Still on ESP32_PORTAL.",
+        p5c: "poops 7.00–12.00. relapse 7.00–13.60 except 9.05 and 11.40.",
+        idle: "Waiting.",
+        fetch: "Fetching firmware…",
+        sync: "Syncing with the chip…",
+        chip: "Chip",
+        using: "Image",
+        mismatch: "Connected chip differs from the selection. Using the image for the detected chip.",
+        done: "Write finished. Unplug and move the board to the PS5.",
+        fail: "Flash failed. Hold BOOT, replug, try again.",
+        abort: "Cancelled.",
+        noport: "No port selected.",
+      },
+      es: {
+        skip: "Saltar al paso",
+        source: "Código",
+        bins: "Bins",
+        steps: ["Navegador", "Placa", "Arranque", "Flasheo", "Wi-Fi", "Guía"],
+        stepsNav: "Pasos",
+        next: "Siguiente",
+        back: "Atrás",
+        t0: "Usa Chrome o Edge",
+        p0: "Web Serial solo funciona en Chromium, por HTTPS. Firefox y Safari no pueden flashear.",
+        ok0: "Este navegador puede usar el puerto serie.",
+        no0: "Este navegador no tiene Web Serial. Abre esta página en Chrome o Edge.",
+        t1: "Elige el chip de la placa",
+        p1: "La imagen incorrecta suele conectar y luego no arranca. El TENSTAR S2 Mini es ESP32-S2.",
+        t2: "Entra en modo descarga",
+        p2: "Desenchufa la placa. Mantén BOOT. Conecta un cable de datos al PC. Sigue pulsando unos 2 segundos y suelta.",
+        t3: "Escribe la imagen de 4 MB",
+        p3: "Conecta; la barra y el registro muestran la escritura. Tras el reset el USB suele desaparecer. Es el firmware de release, no un fallo.",
+        connect: "Conectar y flashear",
+        flashing: "Escribiendo…",
+        t4: "Únete al SoftAP",
+        p4: "Desenchufa del PC y enchufa a la PS5. En la consola, entra a ESP32_PORTAL con la clave 12345678. Quédate en esa red.",
+        p4b: "Relapse necesita una IP. El SoftAP se la da. No hay internet y no hace falta. Poops no necesita interfaz de red.",
+        t5: "Abre la Guía del usuario",
+        p5: "Ajustes → Guía y consejos → Guía del usuario. Espera a la caché y la instalación. No desconectes el ESP32.",
+        p5b: "Arranques siguientes: Media → WebKit Autoloader. Sigue en ESP32_PORTAL.",
+        p5c: "poops 7.00–12.00. relapse 7.00–13.60 excepto 9.05 y 11.40.",
+        idle: "En espera.",
+        fetch: "Descargando firmware…",
+        sync: "Sincronizando con el chip…",
+        chip: "Chip",
+        using: "Imagen",
+        mismatch: "El chip conectado no coincide con la selección. Se usa la imagen del chip detectado.",
+        done: "Escritura lista. Desenchufa y pasa la placa a la PS5.",
+        fail: "Falló el flasheo. Mantén BOOT, vuelve a enchufar e inténtalo.",
+        abort: "Cancelado.",
+        noport: "No se eligió puerto.",
+      },
+    };
+
+    const state = {
+      lang: "en",
+      step: 0,
+      board: "s2",
+      flashed: false,
+      busy: false,
+    };
+
+    const serialOk = typeof navigator !== "undefined" && "serial" in navigator;
+    const stage = document.getElementById("stage");
+    const track = document.getElementById("track");
+
+    function t(key) {
+      return I[state.lang][key];
+    }
+
+    function readUrl() {
+      const q = new URLSearchParams(location.search);
+      const lang = q.get("lang") === "es" || (!q.get("lang") && /^es\b/i.test(navigator.language || "")) ? "es" : "en";
+      const step = Math.min(5, Math.max(0, Number(q.get("step") || 0) || 0));
+      const board = CHIP_OF[q.get("board")] ? q.get("board") : "s2";
+      state.lang = lang;
+      state.step = step;
+      state.board = board;
+    }
+
+    function writeUrl() {
+      const q = new URLSearchParams();
+      q.set("lang", state.lang);
+      q.set("step", String(state.step));
+      q.set("board", state.board);
+      history.replaceState(null, "", `?${q}`);
+    }
+
+    function canOpen(n) {
+      if (n <= state.step) return true;
+      if (n === state.step + 1 && (state.step !== 3 || state.flashed)) return true;
+      return false;
+    }
+
+    function setLang(lang) {
+      state.lang = lang;
+      document.documentElement.lang = lang;
+      writeUrl();
+      render();
+    }
+
+    function goto(n) {
+      if (!canOpen(n) || state.busy) return;
+      state.step = n;
+      writeUrl();
+      render();
+      stage.focus({ preventScroll: true });
+    }
+
+    function renderTrack() {
+      const names = t("steps");
+      track.replaceChildren();
+      names.forEach((name, i) => {
+        if (i) {
+          const rail = document.createElement("span");
+          rail.className = "rail";
+          rail.setAttribute("aria-hidden", "true");
+          track.append(rail);
+        }
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tick";
+        btn.textContent = String(i + 1);
+        btn.title = name;
+        btn.setAttribute("aria-label", `${i + 1}. ${name}`);
+        if (i === state.step) btn.setAttribute("aria-current", "step");
+        btn.disabled = !canOpen(i) || state.busy;
+        btn.addEventListener("click", () => goto(i));
+        li.append(btn);
+        track.append(li);
+      });
+    }
+
+    function navRow(extra) {
+      const row = document.createElement("div");
+      row.className = "row";
+      if (state.step > 0) {
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "act ghost";
+        back.textContent = t("back");
+        back.disabled = state.busy;
+        back.addEventListener("click", () => goto(state.step - 1));
+        row.append(back);
+      }
+      if (extra) row.append(extra);
+      if (state.step < 5) {
+        const next = document.createElement("button");
+        next.type = "button";
+        next.className = "act";
+        next.id = "next-btn";
+        next.textContent = t("next");
+        next.disabled = state.busy || (state.step === 3 && !state.flashed) || (state.step === 0 && !serialOk);
+        next.addEventListener("click", () => goto(state.step + 1));
+        row.append(next);
+      }
+      return row;
+    }
+
+    function para(text) {
+      const p = document.createElement("p");
+      p.innerHTML = text
+        .replaceAll("ESP32_PORTAL", "<code translate=\"no\">ESP32_PORTAL</code>")
+        .replaceAll("12345678", "<code translate=\"no\">12345678</code>")
+        .replaceAll("BOOT", "<kbd>BOOT</kbd>")
+        .replaceAll("WebKit Autoloader", "<strong>WebKit Autoloader</strong>");
+      return p;
+    }
+
+    function renderStage() {
+      const titles = [t("t0"), t("t1"), t("t2"), t("t3"), t("t4"), t("t5")];
+      const h = document.createElement("h1");
+      h.textContent = titles[state.step];
+      const frag = document.createDocumentFragment();
+      frag.append(h);
+
+      if (state.step === 0) {
+        frag.append(para(t("p0")));
+        const s = document.createElement("p");
+        s.className = "status " + (serialOk ? "ok" : "bad");
+        s.textContent = serialOk ? t("ok0") : t("no0");
+        frag.append(s);
+      }
+
+      if (state.step === 1) {
+        frag.append(para(t("p1")));
+        const box = document.createElement("div");
+        box.className = "boards";
+        box.setAttribute("role", "radiogroup");
+        box.setAttribute("aria-label", t("t1"));
+        for (const [id, chip] of Object.entries(CHIP_OF)) {
+          const lab = document.createElement("label");
+          const inp = document.createElement("input");
+          inp.type = "radio";
+          inp.name = "board";
+          inp.value = id;
+          inp.checked = state.board === id;
+          inp.addEventListener("change", () => {
+            state.board = id;
+            writeUrl();
+          });
+          lab.append(inp, document.createTextNode(chip));
+          box.append(lab);
+        }
+        frag.append(box);
+      }
+
+      if (state.step === 2) frag.append(para(t("p2")));
+
+      if (state.step === 3) {
+        frag.append(para(t("p3")));
+        const meter = document.createElement("div");
+        meter.className = "meter";
+        meter.innerHTML = `<div class="bar" aria-hidden="true"><i id="bar"></i></div><div class="pct" id="pct" aria-live="polite">0%</div>`;
+        const log = document.createElement("pre");
+        log.className = "log";
+        log.id = "log";
+        log.setAttribute("aria-live", "polite");
+        const st = document.createElement("p");
+        st.className = "status";
+        st.id = "flash-status";
+        st.textContent = t("idle");
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "act";
+        go.id = "flash-btn";
+        go.textContent = t("connect");
+        go.disabled = !serialOk || state.busy;
+        go.addEventListener("click", flash);
+        frag.append(meter, log, st, navRow(go));
+        stage.replaceChildren(frag);
+        return;
+      }
+
+      if (state.step === 4) {
+        frag.append(para(t("p4")), para(t("p4b")));
+      }
+
+      if (state.step === 5) {
+        frag.append(para(t("p5")), para(t("p5b")), para(t("p5c")));
+      }
+
+      frag.append(navRow());
+      stage.replaceChildren(frag);
+    }
+
+    function render() {
+      document.querySelector("[data-i18n=skip]").textContent = t("skip");
+      document.querySelector("[data-i18n=source]").textContent = t("source");
+      document.querySelector("[data-i18n=bins]").textContent = t("bins");
+      document.getElementById("stepnav").setAttribute("aria-label", t("stepsNav"));
+      document.querySelectorAll("[data-set-lang]").forEach((b) => {
+        b.setAttribute("aria-pressed", b.dataset.setLang === state.lang ? "true" : "false");
+      });
+      renderTrack();
+      renderStage();
+    }
+
+    function setBar(n) {
+      const bar = document.getElementById("bar");
+      const pct = document.getElementById("pct");
+      if (!bar || !pct) return;
+      const v = Math.max(0, Math.min(100, n));
+      bar.style.width = v + "%";
+      pct.textContent = Math.round(v) + "%";
+    }
+
+    function logLine(line) {
+      const el = document.getElementById("log");
+      if (!el) return;
+      el.textContent += (el.textContent ? "\n" : "") + line;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function toBin(u8) {
+      const parts = [];
+      for (let i = 0; i < u8.length; i += 0x2000) {
+        parts.push(String.fromCharCode.apply(null, u8.subarray(i, i + 0x2000)));
+      }
+      return parts.join("");
+    }
+
+    async function loadFirmware(path, onProg) {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`${path} (${res.status})`);
+      const total = Number(res.headers.get("content-length")) || 0;
+      if (!res.body || !total) {
+        const buf = new Uint8Array(await res.arrayBuffer());
+        onProg(100);
+        return buf;
+      }
+      const out = new Uint8Array(total);
+      const reader = res.body.getReader();
+      let n = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        out.set(value, n);
+        n += value.length;
+        onProg((n / total) * 40);
+      }
+      return out.subarray(0, n);
+    }
+
+    async function flash() {
+      if (state.busy) return;
+      const btn = document.getElementById("flash-btn");
+      const st = document.getElementById("flash-status");
+      const log = document.getElementById("log");
+      state.busy = true;
+      btn.disabled = true;
+      btn.textContent = t("flashing");
+      st.className = "status";
+      st.textContent = t("fetch");
+      if (log) log.textContent = "";
+      setBar(0);
+      renderTrack();
+
+      let transport;
+      try {
+        let port;
+        try {
+          port = await navigator.serial.requestPort({
+            filters: [
+              { usbVendorId: 0x303a },
+              { usbVendorId: 0x10c4 },
+              { usbVendorId: 0x1a86 },
+              { usbVendorId: 0x0403 },
+            ],
+          });
+        } catch (err) {
+          if (err?.name === "NotFoundError") throw Object.assign(new Error(t("noport")), { abort: true });
+          throw err;
+        }
+
+        transport = new Transport(port, true);
+        const loader = new ESPLoader({
+          transport,
+          baudrate: 115200,
+          romBaudrate: 115200,
+          terminal: {
+            clean() {},
+            writeLine: (d) => logLine(String(d).trimEnd()),
+            write: (d) => { if (String(d).trim()) logLine(String(d).trim()); },
+          },
+        });
+
+        st.textContent = t("sync");
+        const chip = await loader.main();
+        const name = loader.chip?.CHIP_NAME || chip || CHIP_OF[state.board];
+        logLine(`${t("chip")}: ${name}`);
+        let key = name;
+        if (!FILES[key]) key = CHIP_OF[state.board];
+        if (CHIP_OF[state.board] !== key) logLine(t("mismatch"));
+        const path = FILES[key];
+        logLine(`${t("using")}: ${path}`);
+
+        const data = await loadFirmware(path, setBar);
+        logLine(`${data.byteLength} B`);
+        try { await loader.changeBaud(921600); } catch { /* native USB can ignore this */ }
+
+        await loader.writeFlash({
+          fileArray: [{ data: toBin(data), address: 0 }],
+          flashSize: "4MB",
+          flashMode: "dio",
+          flashFreq: "40m",
+          eraseAll: false,
+          compress: true,
+          reportProgress(_i, written, total) {
+            setBar(40 + (written / total) * 60);
+          },
+        });
+        try { await loader.after("hard_reset"); } catch { /* release firmware drops USB */ }
+        setBar(100);
+        state.flashed = true;
+        st.className = "status ok";
+        st.textContent = t("done");
+        logLine(t("done"));
+      } catch (err) {
+        const aborted = err?.abort || err?.name === "NotFoundError";
+        st.className = "status bad";
+        st.textContent = aborted ? t("abort") : t("fail");
+        logLine(String(err?.message || err));
+      } finally {
+        try { await transport?.disconnect(); } catch { /* already gone */ }
+        state.busy = false;
+        const again = document.getElementById("flash-btn");
+        if (again) {
+          again.disabled = !serialOk;
+          again.textContent = t("connect");
+        }
+        renderTrack();
+        const next = document.getElementById("next-btn");
+        if (next && state.flashed) next.disabled = false;
+      }
+    }
+
+    document.querySelectorAll("[data-set-lang]").forEach((b) => {
+      b.addEventListener("click", () => setLang(b.dataset.setLang));
+    });
+    window.addEventListener("popstate", () => { readUrl(); render(); });
+
+    readUrl();
+    writeUrl();
+    render();
+  </script>
 </body>
 </html>
