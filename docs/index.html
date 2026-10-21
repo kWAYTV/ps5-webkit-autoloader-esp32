@@ -82,6 +82,11 @@
     .bar { height: 4px; background: var(--line); }
     .bar > i { display: block; height: 100%; width: 0; background: var(--fg); }
     .pct { font-variant-numeric: tabular-nums; color: var(--fg); font-size: 13px; }
+    .logwrap { position: relative; }
+    .logwrap .copy {
+      position: absolute; top: 6px; right: 6px; min-height: 32px; padding: 0 10px;
+      font-size: 12px;
+    }
     .log {
       margin: 0; min-height: 7.5rem; max-height: 12.5rem; overflow: auto; padding: 10px 12px;
       background: var(--well); border: 1px solid var(--line);
@@ -175,6 +180,9 @@
         abort: "Cancelled.",
         noport: "No port selected.",
         native: "Native USB. Skipping reset.",
+        copy: "Copy",
+        copied: "Copied",
+        badbin: "Firmware file is missing or invalid. Try again after the site updates.",
       },
       es: {
         skip: "Saltar al paso",
@@ -214,6 +222,9 @@
         abort: "Cancelado.",
         noport: "No se eligió puerto.",
         native: "USB nativo. Sin reset.",
+        copy: "Copiar",
+        copied: "Copiado",
+        badbin: "Falta el firmware o no es válido. Recarga cuando actualice el sitio.",
       },
     };
 
@@ -378,10 +389,19 @@
         const meter = document.createElement("div");
         meter.className = "meter";
         meter.innerHTML = `<div class="bar" aria-hidden="true"><i id="bar"></i></div><div class="pct" id="pct" aria-live="polite">0%</div>`;
+        const wrap = document.createElement("div");
+        wrap.className = "logwrap";
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "act ghost copy";
+        copy.id = "copy-log";
+        copy.textContent = t("copy");
+        copy.addEventListener("click", copyLog);
         const log = document.createElement("pre");
         log.className = "log";
         log.id = "log";
         log.setAttribute("aria-live", "polite");
+        wrap.append(copy, log);
         const st = document.createElement("p");
         st.className = "status";
         st.id = "flash-status";
@@ -393,7 +413,7 @@
         go.textContent = t("connect");
         go.disabled = !serialOk || state.busy;
         go.addEventListener("click", flash);
-        frag.append(meter, log, st, navRow(go));
+        frag.append(meter, wrap, st, navRow(go));
         stage.replaceChildren(frag);
         return;
       }
@@ -438,6 +458,19 @@
       el.scrollTop = el.scrollHeight;
     }
 
+    async function copyLog() {
+      const el = document.getElementById("log");
+      const btn = document.getElementById("copy-log");
+      if (!el || !btn) return;
+      try {
+        await navigator.clipboard.writeText(el.textContent || "");
+        btn.textContent = t("copied");
+        setTimeout(() => { if (btn) btn.textContent = t("copy"); }, 1200);
+      } catch {
+        btn.textContent = t("fail");
+      }
+    }
+
     function ignoreMissingSignals(transport) {
       const wrap = (fn) => async function (...args) {
         try { return await fn.apply(this, args); }
@@ -452,10 +485,11 @@
     }
 
     async function loadFirmware(path, onProg) {
-      const res = await fetch(path);
+      const res = await fetch(`${path}?v=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`${path} (${res.status})`);
       onProg(10);
       const buf = new Uint8Array(await res.arrayBuffer());
+      if (buf.length < 1024 || buf[0] === 0x3c) throw new Error(t("badbin"));
       onProg(40);
       return buf;
     }
@@ -528,12 +562,12 @@
         logLine(`${data.byteLength} B`);
 
         await loader.writeFlash({
-          fileArray: [{ data, address: 0 }],
+          fileArray: [{ data: new Uint8Array(data), address: 0 }],
           flashSize: "4MB",
-          flashMode: "dio",
-          flashFreq: "40m",
+          flashMode: "keep",
+          flashFreq: "keep",
           eraseAll: false,
-          compress: true,
+          compress: false,
           reportProgress(_i, written, total) {
             setBar(40 + (written / total) * 60);
           },
