@@ -1,5 +1,7 @@
 # PS5 WebKit Autoloader for ESP32
 
+> **Disclaimer.** For devices you own, at your own risk. Homebrew and WebKit exploits can violate Sony’s terms. A console or PSN account can be banned, especially if that console goes online. This repo does not bypass Sony enforcement. Authors and contributors are not liable for bans, bricks, data loss, or anything you do with the firmware.
+
 ESP32 SoftAP host for [srbraboo/ps5-webkit-autoloader](https://github.com/srbraboo/ps5-webkit-autoloader). Firmware is [owendswang/ps5-webkit-autoloader-esp32](https://github.com/owendswang/ps5-webkit-autoloader-esp32) with that payload packed into LittleFS.
 
 | Chain | Firmware |
