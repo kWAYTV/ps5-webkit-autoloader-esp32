@@ -28,7 +28,7 @@ jobs:
         run: make -C mklittlefs
 
       - name: Pack srbraboo payload
-        run: ./tools/pack_srbraboo.sh
+        run: bash ./tools/pack_srbraboo.sh
 
       - name: Build firmware
         run: make
