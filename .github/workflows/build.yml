@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   firmware:
     runs-on: ubuntu-22.04
@@ -42,3 +46,66 @@ jobs:
             build/s2/esp32-arduino.s2.merged.bin
             build/s3/esp32-arduino.s3.merged.bin
             build/c3/esp32-arduino.c3.merged.bin
+
+  release:
+    needs: firmware
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download bins
+        uses: actions/download-artifact@v4
+        with:
+          name: esp32-srbraboo-bins
+          path: bins
+
+      - name: Publish latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find bins -name '*.merged.bin' -exec cp -f {} release/ \;
+          ls -lh release
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest \
+            --repo "${{ github.repository }}" \
+            --title "latest" \
+            --notes "Merged 4 MB images. Flash at 0x0. S2: \`esp32-arduino.s2.merged.bin\`." \
+            release/*.merged.bin
+
+  pages:
+    needs: firmware
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-22.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout site
+        uses: actions/checkout@v4
+
+      - name: Download bins
+        uses: actions/download-artifact@v4
+        with:
+          name: esp32-srbraboo-bins
+          path: bins
+
+      - name: Stage Pages
+        run: |
+          mkdir -p docs/firmware
+          find bins -name '*.merged.bin' -exec cp -f {} docs/firmware/ \;
+          ls -lh docs/firmware
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

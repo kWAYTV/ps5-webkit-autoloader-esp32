@@ -1,6 +1,7 @@
 /build
 /data
 /dist
+/dist-ci
 /*.crt
 /*.key
 /server_certs.h

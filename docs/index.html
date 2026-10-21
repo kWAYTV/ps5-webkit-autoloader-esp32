@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PS5 WebKit Autoloader · ESP32</title>
+  <style>
+    :root { color-scheme: dark; --fg: #e8edf2; --muted: #8b99a8; --line: #243040; --bg: #0b1016; --card: #121922; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    h1 { font-size: 1.35rem; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 0.35rem; }
+    h2 { font-size: 0.95rem; margin: 1.75rem 0 0.6rem; }
+    p, li { color: var(--muted); }
+    ol { padding-left: 1.2rem; }
+    li { margin: 0.35rem 0; }
+    kbd { color: var(--fg); background: #1b2430; border: 1px solid var(--line); border-radius: 4px; padding: 0.05rem 0.35rem; font: inherit; font-size: 0.9em; }
+    code { color: var(--fg); font-size: 0.9em; }
+    a { color: #7eb6ff; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; margin: 1.25rem 0; }
+    .flash { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+    esp-web-install-button { display: inline-flex; }
+    .hint { font-size: 0.85rem; margin: 0.75rem 0 0; }
+    footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--muted); }
+    footer a { color: inherit; }
+  </style>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</head>
+<body>
+  <main>
+    <h1>PS5 WebKit Autoloader</h1>
+    <p>Flash a 4&nbsp;MB merged image, then serve srbraboo’s autoloader from the ESP32 SoftAP.</p>
+
+    <div class="card">
+      <div class="flash">
+        <esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
+        <span class="hint">Chrome or Edge. Hold <kbd>BOOT</kbd>, plug USB, then connect.</span>
+      </div>
+      <p class="hint">The chip is detected automatically. After flash, USB serial drops — that is expected. Unplug and move the board to the PS5.</p>
+    </div>
+
+    <h2>On the PS5</h2>
+    <ol>
+      <li>Join <code>ESP32_PORTAL</code> / <code>12345678</code>.</li>
+      <li>Open <strong>Settings → Guide &amp; Tips → User’s Guide</strong>.</li>
+      <li>Wait for cache and install. Leave the ESP32 plugged in.</li>
+      <li>Later boots: Media → <strong>WebKit Autoloader</strong>. Stay on the SoftAP.</li>
+    </ol>
+    <p>Relapse needs an IP on the PS5. The SoftAP provides it. No internet. Poops does not need a network interface.</p>
+    <p>poops 7.00–12.00 · relapse 7.00–13.60 except 9.05 / 11.40</p>
+
+    <footer>
+      <a href="https://github.com/kWAYTV/ps5-webkit-autoloader-esp32">Source</a>
+      · <a href="https://github.com/kWAYTV/ps5-webkit-autoloader-esp32/releases/latest">Releases</a>
+      · owendswang · srbraboo · itsPLK · slopkit · Relapse · ESP Web Tools
+    </footer>
+  </main>
+</body>
+</html>
