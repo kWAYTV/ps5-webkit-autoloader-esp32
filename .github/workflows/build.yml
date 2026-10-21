@@ -2,11 +2,12 @@ name: build
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: firmware
   cancel-in-progress: true
 
 jobs:
@@ -68,12 +69,15 @@ jobs:
           mkdir -p release
           find bins -name '*.merged.bin' -exec cp -f {} release/ \;
           ls -lh release
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest \
-            --repo "${{ github.repository }}" \
-            --title "latest" \
-            --notes "Merged 4 MB images. Flash at 0x0. S2: \`esp32-arduino.s2.merged.bin\`." \
-            release/*.merged.bin
+          if gh release view latest --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload latest --repo "${{ github.repository }}" --clobber release/*.merged.bin
+          else
+            gh release create latest \
+              --repo "${{ github.repository }}" \
+              --title "latest" \
+              --notes "Merged 4 MB images. Flash at 0x0. S2: \`esp32-arduino.s2.merged.bin\`." \
+              release/*.merged.bin
+          fi
 
   pages:
     needs: firmware
