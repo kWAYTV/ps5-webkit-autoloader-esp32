@@ -1,9 +1,41 @@
-name: build
+name: firmware
 
 on:
   push:
     branches: [main]
+    paths:
+      - esp32-arduino.ino
+      - esp8266-arduino.ino
+      - Makefile
+      - install-deps.sh
+      - prepare-data.sh
+      - prepare-dns-library.py
+      - embed_cert.py
+      - externalize_autoloader.py
+      - partitions.csv
+      - partitions-8m.csv
+      - svgo-minimize.config.mjs
+      - tools/**
+      - autoloader-shells/**
+      - autoloader/**
+      - .gitmodules
   pull_request:
+    paths:
+      - esp32-arduino.ino
+      - esp8266-arduino.ino
+      - Makefile
+      - install-deps.sh
+      - prepare-data.sh
+      - prepare-dns-library.py
+      - embed_cert.py
+      - externalize_autoloader.py
+      - partitions.csv
+      - partitions-8m.csv
+      - svgo-minimize.config.mjs
+      - tools/**
+      - autoloader-shells/**
+      - autoloader/**
+      - .gitmodules
   workflow_dispatch:
 
 concurrency:
@@ -80,12 +112,15 @@ jobs:
           fi
 
   pages:
-    needs: firmware
+    needs: [firmware, release]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
     permissions:
       pages: write
       id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: true
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
