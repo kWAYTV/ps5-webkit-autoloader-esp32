@@ -44,6 +44,8 @@ if ! command -v arduino-cli >/dev/null 2>&1; then
         https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \
         -o "$TMP_DIR/install.sh"
 
+    # Current install.sh refuses to create BINDIR itself.
+    mkdir -p "$TMP_DIR/bin"
     BINDIR="$TMP_DIR/bin" sh "$TMP_DIR/install.sh"
 
     $SUDO install -m 755 \
