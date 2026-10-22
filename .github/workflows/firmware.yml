@@ -97,9 +97,7 @@ jobs:
           find bins -name '*.merged.bin' -exec cp -f {} release/ \;
           PAYLOAD="$(tr -d '[:space:]' < bins/payload-version.txt 2>/dev/null || echo unknown)"
           TITLE="srbraboo ${PAYLOAD}"
-          NOTES="srbraboo/ps5-webkit-autoloader ${PAYLOAD}
-
-Flash the merged bin at 0x0. S2: esp32-arduino.s2.merged.bin."
+          NOTES="srbraboo/ps5-webkit-autoloader ${PAYLOAD}. Flash the merged bin at 0x0. S2: esp32-arduino.s2.merged.bin."
           ls -lh release
           if gh release view latest --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release edit latest --repo "${{ github.repository }}" --title "$TITLE" --notes "$NOTES"
