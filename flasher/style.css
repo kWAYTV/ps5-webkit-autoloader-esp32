@@ -132,6 +132,4 @@ footer a { color: var(--dim); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .bar > i { transition: width 80ms linear; }
-  main { animation: in 140ms ease-out; }
 }
-@keyframes in { from { opacity: 0; } to { opacity: 1; } }

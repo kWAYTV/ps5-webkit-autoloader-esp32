@@ -177,7 +177,8 @@ function deviceCard() {
   const name = document.createElement("b");
   name.textContent = session.chipName || CHIP_OF[state.board];
   const sub = document.createElement("span");
-  sub.textContent = session.imageKey ? FILES[session.imageKey] : FILES[CHIP_OF[state.board]];
+  const path = session.imageKey ? FILES[session.imageKey] : FILES[CHIP_OF[state.board]];
+  sub.textContent = path.split("/").pop();
   box.append(name, sub);
   return box;
 }
@@ -304,7 +305,7 @@ function renderStage() {
   }
 
   if (state.step === LAST) {
-    frag.append(rich(t("p6")), stepsList(t("s6")), note(t("n6")), note(t("n6b")), navRow({ next: false }));
+    frag.append(rich(t("p6")), stepsList(t("s6")), note(t("n6b")), navRow({ next: false }));
   }
 
   stage.replaceChildren(frag);
