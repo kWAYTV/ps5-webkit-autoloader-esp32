@@ -11,6 +11,17 @@ ESP32 SoftAP host for [srbraboo/ps5-webkit-autoloader](https://github.com/srbrab
 
 Default chain is poops when both are valid.
 
+## Layout
+
+```
+firmware/   SoftAP portal firmware (ESP32 / ESP8266)
+host/       Pages the PS5 User's Guide loads
+pack/       How srbraboo pages become host/packed
+flasher/    USB web flasher (GitHub Pages)
+debug/      Serial monitor helper
+vendor/     mklittlefs and ps5-unified-autoloader
+```
+
 ## Flash
 
 Hold **BOOT**, plug into a PC, then use the [web flasher](https://percdotdev.github.io/ps5-webkit-autoloader-esp32/) (Chrome / Edge) or write a [release](https://github.com/percdotdev/ps5-webkit-autoloader-esp32/releases/latest) merged bin at `0x0`.
@@ -39,7 +50,7 @@ Relapse needs the PS5 to have an IP. The ESP32 SoftAP assigns one. There is no i
 
 ```sh
 ./install-deps.sh
-python3 tools/pack_srbraboo.py --web /path/to/ps5-webkit-autoloader
+python3 pack/pack_srbraboo.py --web /path/to/ps5-webkit-autoloader
 make
 ```
 

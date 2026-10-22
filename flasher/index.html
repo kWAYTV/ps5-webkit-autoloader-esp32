@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#171717">
+  <title>PS5 WebKit Autoloader</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a class="skip" href="#stage" data-i18n="skip">Skip to step</a>
+  <header>
+    <a class="brand" href="./">PS5 WebKit Autoloader</a>
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" class="act ghost" data-set-lang="en" aria-pressed="true">EN</button>
+      <button type="button" class="act ghost" data-set-lang="es" aria-pressed="false">ES</button>
+    </div>
+  </header>
+  <nav id="stepnav" aria-label="Steps">
+    <ol class="track" id="track"></ol>
+  </nav>
+  <p class="caption" id="caption"></p>
+  <main id="stage" tabindex="-1"></main>
+  <footer>
+    <a href="https://github.com/percdotdev/ps5-webkit-autoloader-esp32" data-i18n="source">Source</a>
+    ·
+    <a href="https://github.com/percdotdev/ps5-webkit-autoloader-esp32/releases/latest" data-i18n="bins">Releases</a>
+  </footer>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

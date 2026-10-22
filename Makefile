@@ -6,15 +6,32 @@ SHELL := /bin/bash
 
 PROJECT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PROJECT_NAME := esp32-arduino
-SOURCE_DATA_DIR := $(PROJECT_DIR)/autoloader
-MINIFIED_DATA_DIR := $(PROJECT_DIR)/autoloader.mini
-DATA_DIR := $(PROJECT_DIR)/data
+
+FIRMWARE_DIR := $(PROJECT_DIR)/firmware
+ESP32_DIR := $(FIRMWARE_DIR)/esp32
+ESP8266_DIR := $(FIRMWARE_DIR)/esp8266
+HOST_PACKED_DIR := $(PROJECT_DIR)/host/packed
+PACK_DIR := $(PROJECT_DIR)/pack
+VENDOR_DIR := $(PROJECT_DIR)/vendor
+
+PORTAL_CONFIG := $(FIRMWARE_DIR)/portal/config.h
+ESP32_SKETCH := $(ESP32_DIR)/$(PROJECT_NAME).ino
+ESP8266_SKETCH := $(ESP8266_DIR)/esp8266-arduino.ino
+ESP32_PARTITIONS := $(ESP32_DIR)/partitions.csv
+ESP32_PARTITIONS_8M := $(ESP32_DIR)/partitions-8m.csv
+ESP32_SKETCH_SOURCES := $(wildcard $(ESP32_DIR)/*.ino) $(wildcard $(ESP32_DIR)/*.h) $(wildcard $(ESP32_DIR)/*.cpp) $(PORTAL_CONFIG)
+ESP8266_SKETCH_SOURCES := $(wildcard $(ESP8266_DIR)/*.ino) $(wildcard $(ESP8266_DIR)/*.h) $(wildcard $(ESP8266_DIR)/*.cpp) $(PORTAL_CONFIG)
+DNS_PREPARER := $(FIRMWARE_DIR)/dns/prepare-dns-library.py
+
 BUILD_DIR := $(PROJECT_DIR)/build
-SERVER_CERT := $(PROJECT_DIR)/server.crt
-SERVER_KEY := $(PROJECT_DIR)/server.key
-SERVER_HEADER := $(PROJECT_DIR)/server_certs.h
-CERT_EMBEDDER := $(PROJECT_DIR)/embed_cert.py
-DATA_PREPARER := $(PROJECT_DIR)/prepare-data.sh
+SOURCE_DATA_DIR := $(HOST_PACKED_DIR)
+MINIFIED_DATA_DIR := $(BUILD_DIR)/packed.mini
+DATA_DIR := $(BUILD_DIR)/littlefs-data
+SERVER_CERT := $(BUILD_DIR)/tls/server.crt
+SERVER_KEY := $(BUILD_DIR)/tls/server.key
+SERVER_HEADER := $(BUILD_DIR)/tls/server_certs.h
+CERT_EMBEDDER := $(FIRMWARE_DIR)/tls/embed_cert.py
+DATA_PREPARER := $(PACK_DIR)/prepare-data.sh
 COMMON_BUILD_DIR := $(BUILD_DIR)/common
 PICO_BUILD_DIR := $(BUILD_DIR)/pico
 S2_BUILD_DIR := $(BUILD_DIR)/s2
@@ -46,8 +63,45 @@ ESPTOOL := $(ARDUINO_ROOT)/tools/esptool_py/4.5.1/esptool.py
 ESP8266_ESPTOOL := $(ESPTOOL)
 ESP8266_MKLITTLEFS := $(ESP8266_ROOT)/tools/mklittlefs/3.1.0-gcc10.3-e5f9fec/mklittlefs
 PARTITION_TOOL := $(CORE_DIR)/tools/gen_esp32part.py
-#LITTLEFS_TOOL := $(shell find "$(ARDUINO_ROOT)/tools" -name mklittlefs -type f 2>/dev/null | head -n1)
-LITTLEFS_TOOL := $(PROJECT_DIR)/mklittlefs/mklittlefs
+LITTLEFS_TOOL := $(VENDOR_DIR)/mklittlefs/mklittlefs
+
+define stage-esp32-sketch
+	rm -rf "$(1)"
+	mkdir -p "$(1)"
+	cp "$(ESP32_DIR)"/*.ino "$(ESP32_DIR)"/*.h "$(ESP32_DIR)"/*.cpp "$(PORTAL_CONFIG)" "$(SERVER_HEADER)" "$(1)/"
+	cp "$(2)" "$(1)/partitions.csv"
+endef
+
+define stage-esp8266-sketch
+	rm -rf "$(1)" "$(ESP8266_BUILD_DIR)/output"
+	mkdir -p "$(1)" "$(ESP8266_BUILD_DIR)/output"
+	cp "$(ESP8266_DIR)"/*.ino "$(ESP8266_DIR)"/*.h "$(ESP8266_DIR)"/*.cpp "$(PORTAL_CONFIG)" "$(SERVER_HEADER)" "$(1)/"
+endef
+
+define pad-merged
+	size=$$(stat -c %s "$(1)")
+	test "$$size" -le $(2) || { echo "Error: $(3) exceeds $(4): $$size bytes" >&2; exit 1; }
+	if [ "$$size" -lt $(2) ]; then
+	    padding=$$(($(2) - size))
+	    head -c "$$padding" /dev/zero | tr '\000' '\377' >> "$(1)"
+	fi
+	test "$$(stat -c %s "$(1)")" -eq $(2)
+endef
+
+define merge-esp32-image
+	python3 "$(ESPTOOL)" \
+	    --chip $(1) \
+	    merge_bin \
+	    -o "$(2)" \
+	    --flash_mode dio \
+	    --flash_freq $(3) \
+	    --flash_size $(4) \
+	    $(5) "$(6)" \
+	    0x8000 "$(7)" \
+	    0x10000 "$(8)" \
+	    "$(9)" "$(10)"
+	$(call pad-merged,$(2),$(11),$(12),$(4))
+endef
 
 USB_DEBUG ?= 0
 ifeq ($(USB_DEBUG),1)
@@ -178,7 +232,7 @@ check: check-littlefs
 	test -d "$(CORE_DIR)" || { echo "Error: esp32:esp32@$(CORE_VERSION) is not installed" >&2; exit 1; }
 	test -f "$(ESPTOOL)" || { echo "Error: $(ESPTOOL) was not found" >&2; exit 1; }
 	test -f "$(PARTITION_TOOL)" || { echo "Error: $(PARTITION_TOOL) was not found" >&2; exit 1; }
-	test -f "$(PROJECT_DIR)/$(PROJECT_NAME).ino"
+	test -f "$(ESP32_SKETCH)"
 
 check-8266: check-data
 	@command -v $(ARDUINO_CLI) >/dev/null
@@ -186,11 +240,11 @@ check-8266: check-data
 	test -d "$(ESP8266_CORE_DIR)" || { echo "Error: esp8266:esp8266@$(ESP8266_CORE_VERSION) is not installed" >&2; exit 1; }
 	test -f "$(ESP8266_ESPTOOL)" || { echo "Error: ESP8266 esptool was not found" >&2; exit 1; }
 	test -x "$(ESP8266_MKLITTLEFS)" || { echo "Error: ESP8266 mklittlefs was not found" >&2; exit 1; }
-	test -f "$(PROJECT_DIR)/esp8266-arduino.ino"
-	test -f "$(PROJECT_DIR)/server_certs.h"
+	test -f "$(ESP8266_SKETCH)"
 
 $(SERVER_CERT) $(SERVER_KEY) &:
 	@echo "Generating a self-signed HTTPS certificate..."
+	mkdir -p "$(dir $(SERVER_CERT))"
 	openssl ecparam -name prime256v1 \
 		-genkey \
 		-noout \
@@ -204,27 +258,14 @@ $(SERVER_CERT) $(SERVER_KEY) &:
 		-addext "subjectAltName=DNS:manuals.playstation.net,IP:192.168.4.1"
 	chmod 600 "$(SERVER_KEY)"
 
-#$(SERVER_CERT) $(SERVER_KEY) &:
-#	@echo "Generating a self-signed HTTPS certificate..."
-#	openssl req -x509 -newkey rsa:2048 -nodes \
-#		-keyout "$(SERVER_KEY)" \
-#		-out "$(SERVER_CERT)" \
-#  	-days 3650 \
-#  	-subj "/CN=manuals.playstation.net" \
-#  	-addext "subjectAltName=DNS:manuals.playstation.net,IP:192.168.4.1"
-#	chmod 600 "$(SERVER_KEY)"
-
 $(SERVER_HEADER): $(SERVER_CERT) $(SERVER_KEY) $(CERT_EMBEDDER)
 	@python3 "$(CERT_EMBEDDER)" "$(SERVER_CERT)" "$(SERVER_KEY)" "$(SERVER_HEADER)"
 
-$(DNS_LIBRARY_STAMP): $(CORE_DIR)/libraries/DNSServer/src/DNSServer.cpp $(CORE_DIR)/libraries/DNSServer/src/DNSServer.h $(PROJECT_DIR)/prepare-dns-library.py Makefile
-	@python3 "$(PROJECT_DIR)/prepare-dns-library.py" "$(CORE_DIR)/libraries/DNSServer" "$(DNS_LIBRARY)"
+$(DNS_LIBRARY_STAMP): $(CORE_DIR)/libraries/DNSServer/src/DNSServer.cpp $(CORE_DIR)/libraries/DNSServer/src/DNSServer.h $(DNS_PREPARER) Makefile
+	@python3 "$(DNS_PREPARER)" "$(CORE_DIR)/libraries/DNSServer" "$(DNS_LIBRARY)"
 
-$(PICO_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/partitions.csv Makefile $(DNS_LIBRARY_STAMP)
-	@rm -rf "$(PICO_SKETCH_DIR)"
-	mkdir -p "$(PICO_SKETCH_DIR)"
-	cp "$(PROJECT_DIR)/$(PROJECT_NAME).ino" "$(SERVER_HEADER)" "$(PICO_SKETCH_DIR)/"
-	cp "$(PROJECT_DIR)/partitions.csv" "$(PICO_SKETCH_DIR)/"
+$(PICO_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS) Makefile $(DNS_LIBRARY_STAMP)
+	@$(call stage-esp32-sketch,$(PICO_SKETCH_DIR),$(ESP32_PARTITIONS))
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(PICO_FQBN)" \
@@ -236,11 +277,8 @@ $(PICO_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/
 	size=$$(stat -c %s "$(PICO_APP)")
 	test "$$size" -le "$(APP_PARTITION_SIZE)" || { echo "Error: Pico application exceeds the 1 MB partition: $$size bytes" >&2; exit 1; }
 
-$(S2_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/partitions.csv Makefile $(DNS_LIBRARY_STAMP)
-	@rm -rf "$(S2_SKETCH_DIR)"
-	mkdir -p "$(S2_SKETCH_DIR)"
-	cp "$(PROJECT_DIR)/$(PROJECT_NAME).ino" "$(SERVER_HEADER)" "$(S2_SKETCH_DIR)/"
-	cp "$(PROJECT_DIR)/partitions.csv" "$(S2_SKETCH_DIR)/"
+$(S2_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS) Makefile $(DNS_LIBRARY_STAMP)
+	@$(call stage-esp32-sketch,$(S2_SKETCH_DIR),$(ESP32_PARTITIONS))
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(S2_FQBN)" \
@@ -253,11 +291,8 @@ $(S2_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/pa
 	size=$$(stat -c %s "$(S2_APP)")
 	test "$$size" -le "$(APP_PARTITION_SIZE)" || { echo "Error: S2 application exceeds the 1 MB partition: $$size bytes" >&2; exit 1; }
 
-$(S3_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/partitions.csv Makefile $(DNS_LIBRARY_STAMP)
-	@rm -rf "$(S3_SKETCH_DIR)"
-	mkdir -p "$(S3_SKETCH_DIR)"
-	cp "$(PROJECT_DIR)/$(PROJECT_NAME).ino" "$(SERVER_HEADER)" "$(S3_SKETCH_DIR)/"
-	cp "$(PROJECT_DIR)/partitions.csv" "$(S3_SKETCH_DIR)/"
+$(S3_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS) Makefile $(DNS_LIBRARY_STAMP)
+	@$(call stage-esp32-sketch,$(S3_SKETCH_DIR),$(ESP32_PARTITIONS))
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(S3_FQBN)" \
@@ -269,11 +304,10 @@ $(S3_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/pa
 	size=$$(stat -c %s "$(S3_APP)")
 	test "$$size" -le "$(APP_PARTITION_SIZE)" || { echo "Error: S3 application exceeds the 1 MB partition: $$size bytes" >&2; exit 1; }
 
-$(PICO_8M_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/partitions-8m.csv Makefile $(DNS_LIBRARY_STAMP)
-	@rm -rf "$(PICO_8M_SKETCH_DIR)" "$(PICO_8M_OUTPUT_DIR)"
-	mkdir -p "$(PICO_8M_SKETCH_DIR)" "$(PICO_8M_OUTPUT_DIR)"
-	cp "$(PROJECT_DIR)/$(PROJECT_NAME).ino" "$(SERVER_HEADER)" "$(PICO_8M_SKETCH_DIR)/"
-	cp "$(PROJECT_DIR)/partitions-8m.csv" "$(PICO_8M_SKETCH_DIR)/partitions.csv"
+$(PICO_8M_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS_8M) Makefile $(DNS_LIBRARY_STAMP)
+	@rm -rf "$(PICO_8M_OUTPUT_DIR)"
+	$(call stage-esp32-sketch,$(PICO_8M_SKETCH_DIR),$(ESP32_PARTITIONS_8M))
+	mkdir -p "$(PICO_8M_OUTPUT_DIR)"
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(PICO_8M_FQBN)" \
@@ -285,11 +319,8 @@ $(PICO_8M_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DI
 	size=$$(stat -c %s "$(PICO_8M_APP)")
 	test "$$size" -le "$(PICO_8M_APP_PARTITION_SIZE)" || { echo "Error: Pico 8 MB application exceeds the 1.5 MB partition: $$size bytes" >&2; exit 1; }
 
-$(C3_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/partitions.csv Makefile $(DNS_LIBRARY_STAMP)
-	@rm -rf "$(C3_SKETCH_DIR)"
-	mkdir -p "$(C3_SKETCH_DIR)"
-	cp "$(PROJECT_DIR)/$(PROJECT_NAME).ino" "$(SERVER_HEADER)" "$(C3_SKETCH_DIR)/"
-	cp "$(PROJECT_DIR)/partitions.csv" "$(C3_SKETCH_DIR)/"
+$(C3_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS) Makefile $(DNS_LIBRARY_STAMP)
+	@$(call stage-esp32-sketch,$(C3_SKETCH_DIR),$(ESP32_PARTITIONS))
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(C3_FQBN)" \
@@ -301,10 +332,8 @@ $(C3_APP): $(PROJECT_DIR)/$(PROJECT_NAME).ino $(SERVER_HEADER) $(PROJECT_DIR)/pa
 	size=$$(stat -c %s "$(C3_APP)")
 	test "$$size" -le "$(APP_PARTITION_SIZE)" || { echo "Error: C3 application exceeds the 1 MB partition: $$size bytes" >&2; exit 1; }
 
-$(ESP8266_APP): $(PROJECT_DIR)/esp8266-arduino.ino $(SERVER_HEADER) Makefile
-	@rm -rf "$(ESP8266_SKETCH_DIR)" "$(ESP8266_BUILD_DIR)/output"
-	mkdir -p "$(ESP8266_SKETCH_DIR)" "$(ESP8266_BUILD_DIR)/output"
-	cp "$(PROJECT_DIR)/esp8266-arduino.ino" "$(PROJECT_DIR)/server_certs.h" "$(ESP8266_SKETCH_DIR)/"
+$(ESP8266_APP): $(ESP8266_SKETCH_SOURCES) $(SERVER_HEADER) Makefile
+	@$(call stage-esp8266-sketch,$(ESP8266_SKETCH_DIR))
 	$(ARDUINO_CLI) compile --fqbn "$(ESP8266_FQBN)" --output-dir "$(ESP8266_BUILD_DIR)/output" "$(ESP8266_SKETCH_DIR)"
 	size=$$(stat -c %s "$(ESP8266_APP)")
 	test "$$size" -le 1044464 || { echo "Error: ESP8266 application exceeds the 4M3M sketch area: $$size bytes" >&2; exit 1; }
@@ -315,13 +344,7 @@ $(ESP8266_LITTLEFS_IMAGE): datadir
 
 $(ESP8266_MERGED): $(ESP8266_APP) $(ESP8266_LITTLEFS_IMAGE)
 	@python3 "$(ESP8266_ESPTOOL)" --chip esp8266 merge_bin -o "$(ESP8266_MERGED)" --flash_mode dout --flash_freq 40m --flash_size 4MB 0x0000 "$(ESP8266_APP)" "$(ESP8266_LITTLEFS_OFFSET)" "$(ESP8266_LITTLEFS_IMAGE)"
-	size=$$(stat -c %s "$(ESP8266_MERGED)")
-	test "$$size" -le "$(ESP8266_FLASH_SIZE)" || { echo "Error: ESP8266 image exceeds 4 MB: $$size bytes" >&2; exit 1; }
-	if [ "$$size" -lt "$(ESP8266_FLASH_SIZE)" ]; then
-		padding=$$(($(ESP8266_FLASH_SIZE) - size))
-		head -c "$$padding" /dev/zero | tr '\000' '\377' >> "$(ESP8266_MERGED)"
-	fi
-	test "$$(stat -c %s "$(ESP8266_MERGED)")" -eq "$(ESP8266_FLASH_SIZE)"
+	$(call pad-merged,$(ESP8266_MERGED),$(ESP8266_FLASH_SIZE),ESP8266 image,4 MB)
 
 $(LITTLEFS_IMAGE): datadir
 	@echo
@@ -335,84 +358,16 @@ $(LITTLEFS_IMAGE): datadir
 	    "$(LITTLEFS_IMAGE)"
 
 $(PICO_MERGED): $(PICO_APP) $(LITTLEFS_IMAGE)
-	@python3 "$(ESPTOOL)" \
-	    --chip esp32 \
-	    merge_bin \
-	    -o "$(PICO_MERGED)" \
-	    --flash_mode dio \
-	    --flash_freq 40m \
-	    --flash_size 4MB \
-	    0x1000 "$(PICO_BOOTLOADER)" \
-	    0x8000 "$(PICO_PARTITIONS)" \
-	    0x10000 "$(PICO_APP)" \
-	    "$(LITTLEFS_OFFSET)" "$(LITTLEFS_IMAGE)"
-	size=$$(stat -c %s "$(PICO_MERGED)")
-	test "$$size" -le "$(FLASH_SIZE)" || { echo "Error: Pico image exceeds 4 MB: $$size bytes" >&2; exit 1; }
-	if [ "$$size" -lt "$(FLASH_SIZE)" ]; then
-	    padding=$$(($(FLASH_SIZE) - size))
-	    head -c "$$padding" /dev/zero | tr '\000' '\377' >> "$(PICO_MERGED)"
-	fi
-	test "$$(stat -c %s "$(PICO_MERGED)")" -eq "$(FLASH_SIZE)"
+	@$(call merge-esp32-image,esp32,$(PICO_MERGED),40m,4MB,0x1000,$(PICO_BOOTLOADER),$(PICO_PARTITIONS),$(PICO_APP),$(LITTLEFS_OFFSET),$(LITTLEFS_IMAGE),$(FLASH_SIZE),Pico image)
 
 $(S2_MERGED): $(S2_APP) $(LITTLEFS_IMAGE)
-	@python3 "$(ESPTOOL)" \
-	    --chip esp32s2 \
-	    merge_bin \
-	    -o "$(S2_MERGED)" \
-	    --flash_mode dio \
-	    --flash_freq 40m \
-	    --flash_size 4MB \
-	    0x1000 "$(S2_BOOTLOADER)" \
-	    0x8000 "$(S2_PARTITIONS)" \
-	    0x10000 "$(S2_APP)" \
-	    "$(LITTLEFS_OFFSET)" "$(LITTLEFS_IMAGE)"
-	size=$$(stat -c %s "$(S2_MERGED)")
-	test "$$size" -le "$(FLASH_SIZE)" || { echo "Error: S2 image exceeds 4 MB: $$size bytes" >&2; exit 1; }
-	if [ "$$size" -lt "$(FLASH_SIZE)" ]; then
-	    padding=$$(($(FLASH_SIZE) - size))
-	    head -c "$$padding" /dev/zero | tr '\000' '\377' >> "$(S2_MERGED)"
-	fi
-	test "$$(stat -c %s "$(S2_MERGED)")" -eq "$(FLASH_SIZE)"
+	@$(call merge-esp32-image,esp32s2,$(S2_MERGED),40m,4MB,0x1000,$(S2_BOOTLOADER),$(S2_PARTITIONS),$(S2_APP),$(LITTLEFS_OFFSET),$(LITTLEFS_IMAGE),$(FLASH_SIZE),S2 image)
 
 $(S3_MERGED): $(S3_APP) $(LITTLEFS_IMAGE)
-	@python3 "$(ESPTOOL)" \
-	    --chip esp32s3 \
-	    merge_bin \
-	    -o "$(S3_MERGED)" \
-	    --flash_mode dio \
-	    --flash_freq 80m \
-	    --flash_size 4MB \
-	    0x0 "$(S3_BOOTLOADER)" \
-	    0x8000 "$(S3_PARTITIONS)" \
-	    0x10000 "$(S3_APP)" \
-	    "$(LITTLEFS_OFFSET)" "$(LITTLEFS_IMAGE)"
-	size=$$(stat -c %s "$(S3_MERGED)")
-	test "$$size" -le "$(FLASH_SIZE)" || { echo "Error: S3 image exceeds 4 MB: $$size bytes" >&2; exit 1; }
-	if [ "$$size" -lt "$(FLASH_SIZE)" ]; then
-	    padding=$$(($(FLASH_SIZE) - size))
-	    head -c "$$padding" /dev/zero | tr '\000' '\377' >> "$(S3_MERGED)"
-	fi
-	test "$$(stat -c %s "$(S3_MERGED)")" -eq "$(FLASH_SIZE)"
+	@$(call merge-esp32-image,esp32s3,$(S3_MERGED),80m,4MB,0x0,$(S3_BOOTLOADER),$(S3_PARTITIONS),$(S3_APP),$(LITTLEFS_OFFSET),$(LITTLEFS_IMAGE),$(FLASH_SIZE),S3 image)
 
 $(C3_MERGED): $(C3_APP) $(LITTLEFS_IMAGE)
-	@python3 "$(ESPTOOL)" \
-	    --chip esp32c3 \
-	    merge_bin \
-	    -o "$(C3_MERGED)" \
-	    --flash_mode dio \
-	    --flash_freq 40m \
-	    --flash_size 4MB \
-	    0x0 "$(C3_BOOTLOADER)" \
-	    0x8000 "$(C3_PARTITIONS)" \
-	    0x10000 "$(C3_APP)" \
-	    "$(LITTLEFS_OFFSET)" "$(LITTLEFS_IMAGE)"
-	size=$$(stat -c %s "$(C3_MERGED)")
-	test "$$size" -le "$(FLASH_SIZE)" || { echo "Error: C3 image exceeds 4 MB: $$size bytes" >&2; exit 1; }
-	if [ "$$size" -lt "$(FLASH_SIZE)" ]; then
-	    padding=$$(($(FLASH_SIZE) - size))
-	    head -c "$$padding" /dev/zero | tr '\000' '\377' >> "$(C3_MERGED)"
-	fi
-	test "$$(stat -c %s "$(C3_MERGED)")" -eq "$(FLASH_SIZE)"
+	@$(call merge-esp32-image,esp32c3,$(C3_MERGED),40m,4MB,0x0,$(C3_BOOTLOADER),$(C3_PARTITIONS),$(C3_APP),$(LITTLEFS_OFFSET),$(LITTLEFS_IMAGE),$(FLASH_SIZE),C3 image)
 
 $(PICO_8M_LITTLEFS_IMAGE): datadir
 	@echo
@@ -426,26 +381,9 @@ $(PICO_8M_LITTLEFS_IMAGE): datadir
 	    "$(PICO_8M_LITTLEFS_IMAGE)"
 
 $(PICO_8M_MERGED): $(PICO_8M_APP) $(PICO_8M_LITTLEFS_IMAGE)
-	@python3 "$(ESPTOOL)" \
-	    --chip esp32 \
-	    merge_bin \
-	    -o "$(PICO_8M_MERGED)" \
-	    --flash_mode dio \
-	    --flash_freq 40m \
-	    --flash_size 8MB \
-	    0x1000 "$(PICO_8M_BOOTLOADER)" \
-	    0x8000 "$(PICO_8M_PARTITIONS)" \
-	    0x10000 "$(PICO_8M_APP)" \
-	    "$(PICO_8M_LITTLEFS_OFFSET)" "$(PICO_8M_LITTLEFS_IMAGE)"
-	size=$$(stat -c %s "$(PICO_8M_MERGED)")
-	test "$$size" -le "$(PICO_8M_FLASH_SIZE)" || { echo "Error: Pico image exceeds 8 MB: $$size bytes" >&2; exit 1; }
-	if [ "$$size" -lt "$(PICO_8M_FLASH_SIZE)" ]; then
-	    padding=$$(($(PICO_8M_FLASH_SIZE) - size))
-	    head -c "$$padding" /dev/zero | tr '\000' '\377' >> "$(PICO_8M_MERGED)"
-	fi
-	test "$$(stat -c %s "$(PICO_8M_MERGED)")" -eq "$(PICO_8M_FLASH_SIZE)"
+	@$(call merge-esp32-image,esp32,$(PICO_8M_MERGED),40m,8MB,0x1000,$(PICO_8M_BOOTLOADER),$(PICO_8M_PARTITIONS),$(PICO_8M_APP),$(PICO_8M_LITTLEFS_OFFSET),$(PICO_8M_LITTLEFS_IMAGE),$(PICO_8M_FLASH_SIZE),Pico image)
 
 clean:
-	@rm -rf "$(BUILD_DIR)" "$(DATA_DIR)" "$(MINIFIED_DATA_DIR)"
+	@rm -rf "$(BUILD_DIR)"
 
 FORCE:

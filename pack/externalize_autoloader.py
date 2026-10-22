@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extract embedded ELF/BIN files from the ESP32 autoloader's two HTML pages.
 
-Usage: python3 externalize_autoloader.py [autoloader-directory]
+Usage: python3 pack/externalize_autoloader.py [host/packed-directory]
 Run after the installer/pointer have been adapted for ESP32 split AppCache.
 Backups stay outside the web directory, so they are not packed into LittleFS.
 """
@@ -150,7 +150,7 @@ def update_manifest(text, base, resources):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", nargs="?", type=Path,
-                        default=Path(__file__).resolve().parent / "autoloader")
+                        default=Path(__file__).resolve().parents[1] / "host" / "packed")
     args = parser.parse_args()
     root = args.directory.resolve()
     pages = list((root / "app").glob("*/poops.html"))

@@ -4,38 +4,26 @@ on:
   push:
     branches: [main]
     paths:
-      - esp32-arduino.ino
-      - esp8266-arduino.ino
+      - firmware/**
+      - host/**
+      - pack/**
+      - flasher/**
+      - vendor/**
       - Makefile
       - install-deps.sh
-      - prepare-data.sh
-      - prepare-dns-library.py
-      - embed_cert.py
-      - externalize_autoloader.py
-      - partitions.csv
-      - partitions-8m.csv
-      - svgo-minimize.config.mjs
-      - tools/**
-      - autoloader-shells/**
-      - autoloader/**
       - .gitmodules
+      - .github/workflows/firmware.yml
   pull_request:
     paths:
-      - esp32-arduino.ino
-      - esp8266-arduino.ino
+      - firmware/**
+      - host/**
+      - pack/**
+      - flasher/**
+      - vendor/**
       - Makefile
       - install-deps.sh
-      - prepare-data.sh
-      - prepare-dns-library.py
-      - embed_cert.py
-      - externalize_autoloader.py
-      - partitions.csv
-      - partitions-8m.csv
-      - svgo-minimize.config.mjs
-      - tools/**
-      - autoloader-shells/**
-      - autoloader/**
       - .gitmodules
+      - .github/workflows/firmware.yml
   workflow_dispatch:
 
 concurrency:
@@ -62,7 +50,7 @@ jobs:
         run: ./install-deps.sh
 
       - name: Build mklittlefs
-        run: make -C mklittlefs
+        run: make -C vendor/mklittlefs
 
       - name: Record payload version
         run: |
@@ -71,7 +59,7 @@ jobs:
           echo "${base} (${sha})" | tee payload-version.txt
 
       - name: Pack srbraboo payload
-        run: bash ./tools/pack_srbraboo.sh
+        run: bash ./pack/pack_srbraboo.sh
 
       - name: Build firmware
         run: make
@@ -149,14 +137,14 @@ Flash the merged bin at 0x0. S2: esp32-arduino.s2.merged.bin."
 
       - name: Stage Pages
         run: |
-          mkdir -p docs/firmware
-          find bins -name '*.merged.bin' -exec cp -f {} docs/firmware/ \;
-          ls -lh docs/firmware
+          mkdir -p flasher/firmware
+          find bins -name '*.merged.bin' -exec cp -f {} flasher/firmware/ \;
+          ls -lh flasher/firmware
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: flasher
 
       - name: Deploy Pages
         id: deploy

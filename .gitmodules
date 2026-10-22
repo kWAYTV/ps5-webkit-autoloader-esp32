@@ -1,7 +1,7 @@
-[submodule "ps5-unified-autoloader"]
-	path = ps5-unified-autoloader
+[submodule "vendor/ps5-unified-autoloader"]
+	path = vendor/ps5-unified-autoloader
 	url = https://github.com/owendswang/ps5-unified-autoloader.git
 	branch = feat/install-webkit-shortcut
-[submodule "mklittlefs"]
-	path = mklittlefs
+[submodule "vendor/mklittlefs"]
+	path = vendor/mklittlefs
 	url = https://github.com/owendswang/mklittlefs.git

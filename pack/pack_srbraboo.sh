@@ -7,4 +7,4 @@ if [ ! -f "$WEB/Makefile" ]; then
     echo "Add the submodule: git submodule update --init --recursive webkit-autoloader" >&2
     exit 1
 fi
-python3 "$ROOT/tools/pack_srbraboo.py" --web "$WEB" --out "$ROOT/autoloader"
+python3 "$ROOT/pack/pack_srbraboo.py" --web "$WEB" --out "$ROOT/host/packed"
