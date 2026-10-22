@@ -1,26 +1,15 @@
 # PS5 WebKit Autoloader for ESP32
 
-> **Disclaimer.** For devices you own, at your own risk. Homebrew and WebKit exploits can violate Sony’s terms. A console or PSN account can be banned, especially if that console goes online. This repo does not bypass Sony enforcement. Authors and contributors are not liable for bans, bricks, data loss, or anything you do with the firmware.
+ESP32 SoftAP that serves [srbraboo/ps5-webkit-autoloader](https://github.com/srbraboo/ps5-webkit-autoloader) from LittleFS so the PS5 User's Guide can install it.
 
-ESP32 SoftAP host for [srbraboo/ps5-webkit-autoloader](https://github.com/srbraboo/ps5-webkit-autoloader). Firmware is [owendswang/ps5-webkit-autoloader-esp32](https://github.com/owendswang/ps5-webkit-autoloader-esp32) with that payload packed into LittleFS.
+For devices you own. Homebrew and WebKit exploits can violate Sony’s terms. A console or PSN account can be banned. This repo does not bypass Sony enforcement.
 
 | Chain | Firmware |
 | --- | --- |
 | poops | 7.00–12.00 |
 | relapse | 7.00–13.60 except 9.05 and 11.40 |
 
-Default chain is poops when both are valid.
-
-## Layout
-
-```
-firmware/   SoftAP portal firmware (ESP32 / ESP8266)
-host/       Pages the PS5 User's Guide loads
-pack/       How srbraboo pages become host/packed
-flasher/    USB web flasher (GitHub Pages)
-debug/      Serial monitor helper
-vendor/     mklittlefs and ps5-unified-autoloader
-```
+Poops is the default when both are valid.
 
 ## Flash
 
@@ -33,18 +22,16 @@ Hold **BOOT**, plug into a PC, then use the [web flasher](https://percdotdev.git
 | ESP32-PICO | `esp32-arduino.pico.merged.bin` |
 | ESP32-C3 | `esp32-arduino.c3.merged.bin` |
 
-Release images disconnect native USB after boot. Unplug and move the board to the PS5.
+Release images drop native USB after boot. Move the board to the PS5.
 
 ## Use
 
-1. PS5 → Wi-Fi `ESP32_PORTAL` / `12345678`
+1. PS5 Wi-Fi: `ESP32_PORTAL` / `12345678`
 2. **Settings → Guide & Tips → User's Guide**
-3. Wait for cache and install. Leave the ESP32 plugged in.
-4. Payload Manager opens. A **WebKit Autoloader** shortcut appears under Media.
+3. Wait for cache and install. Leave the board plugged in.
+4. Payload Manager opens. Later boots: **Media → WebKit Autoloader**. Stay on `ESP32_PORTAL`.
 
-Later boots: launch the Media shortcut. Stay on `ESP32_PORTAL`.
-
-Relapse needs the PS5 to have an IP. The ESP32 SoftAP assigns one. There is no internet, and none is required. Poops does not need a network interface.
+Relapse needs the SoftAP DHCP lease. Poops does not need a network interface.
 
 ## Build
 
@@ -54,18 +41,12 @@ python3 pack/pack_srbraboo.py --web /path/to/ps5-webkit-autoloader
 make
 ```
 
-Arduino-ESP32 **2.0.11** only. Use that core's `mklittlefs`, not 4.x. Images land in `build/{pico,s2,s3,c3}/`. `make debug` / `make debug-s2` keeps USB CDC.
+Arduino-ESP32 **2.0.11** only. Images land in `build/{pico,s2,s3,c3}/`. `make debug` / `make debug-s2` keeps USB CDC.
 
 ## Credits
 
-- [owendswang/ps5-webkit-autoloader-esp32](https://github.com/owendswang/ps5-webkit-autoloader-esp32)
-- [srbraboo/ps5-webkit-autoloader](https://github.com/srbraboo/ps5-webkit-autoloader)
-- [itsPLK/ps5-webkit-autoloader](https://github.com/itsPLK/ps5-webkit-autoloader)
-- [itsPLK/ps5-unified-autoloader](https://github.com/itsPLK/ps5-unified-autoloader)
-- [jordyidk/slopkit](https://github.com/jordyidk/slopkit)
-- [ntfargo/Relapse-Exploit](https://github.com/ntfargo/Relapse-Exploit)
-- [espressif/esptool-js](https://github.com/espressif/esptool-js)
+Started from [owendswang/ps5-webkit-autoloader-esp32](https://github.com/owendswang/ps5-webkit-autoloader-esp32). Payload: [srbraboo](https://github.com/srbraboo/ps5-webkit-autoloader), [itsPLK](https://github.com/itsPLK/ps5-webkit-autoloader). Chains: [slopkit](https://github.com/jordyidk/slopkit), [Relapse](https://github.com/ntfargo/Relapse-Exploit). Flasher: [esptool-js](https://github.com/espressif/esptool-js).
 
 ## License
 
-Firmware and build code: MIT. Bundled payloads and modified upstream keep their own terms. See [LICENSE](LICENSE).
+Firmware and build: MIT. Bundled payloads keep their own terms. See [LICENSE](LICENSE).
