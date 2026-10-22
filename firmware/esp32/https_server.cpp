@@ -5,6 +5,7 @@
 #include "https_server.h"
 #include "host_files.h"
 #include "config.h"
+#include "led.h"
 
 #if USB_DEBUG
 #include "esp_log.h"
@@ -130,6 +131,7 @@ static void setHttpsNoCacheHeaders(httpd_req_t *req)
 
 static esp_err_t httpsFileHandler(httpd_req_t *req)
 {
+    portalLedActivity();
     portalLogHeap("HTTPS file begin");
 
     Serial.printf("[HTTPS] method=%d uri=%s\n", req->method, req->uri);
@@ -238,6 +240,7 @@ static esp_err_t httpsFileHandler(httpd_req_t *req)
 
 static esp_err_t httpsFixedUrlHandler(httpd_req_t *req)
 {
+    portalLedActivity();
     portalLogHeap("HTTPS fixed URL");
     setHttpsNoCacheHeaders(req);
 
@@ -265,6 +268,7 @@ static esp_err_t httpsFixedUrlHandler(httpd_req_t *req)
 
 static esp_err_t httpsNetworkTestHandler(httpd_req_t *req)
 {
+    portalLedActivity();
     portalLogHeap("HTTPS network test");
     Serial.printf(
         "[HTTPS %s] uri=%s content_len=%d\n",

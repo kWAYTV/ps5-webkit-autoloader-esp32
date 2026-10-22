@@ -1,0 +1,24 @@
+#pragma once
+
+#ifndef PORTAL_LED_PIN
+#if defined(ESP8266)
+#define PORTAL_LED_PIN 2
+#define PORTAL_LED_ON LOW
+#elif CONFIG_IDF_TARGET_ESP32S2
+#define PORTAL_LED_PIN 15
+#define PORTAL_LED_ON HIGH
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define PORTAL_LED_PIN 21
+#define PORTAL_LED_ON HIGH
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define PORTAL_LED_PIN 8
+#define PORTAL_LED_ON HIGH
+#elif CONFIG_IDF_TARGET_ESP32
+#define PORTAL_LED_PIN 10
+#define PORTAL_LED_ON HIGH
+#endif
+#endif
+
+#ifndef PORTAL_LED_ON
+#define PORTAL_LED_ON HIGH
+#endif

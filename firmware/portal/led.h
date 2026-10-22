@@ -1,11 +1,7 @@
 #pragma once
 
-#ifdef LED_PIN
-#ifndef LED_ON_LEVEL
-#define LED_ON_LEVEL LOW
-#endif
-#endif
-
 void portalLedBegin();
+void portalLedReady();
 void portalLedActivity();
+void portalLedError();
 void portalLedUpdate();

@@ -7,6 +7,7 @@
 #include "server_certs.h"
 #include "config.h"
 #include "host_files.h"
+#include "led.h"
 #include "routes.h"
 
 static const IPAddress AP_IP(192, 168, 4, 1);
@@ -21,6 +22,7 @@ void setup()
 {
     Serial.begin(115200);
     Serial.setDebugOutput(false);
+    portalLedBegin();
     delay(1000);
 
     Serial.println("\nBOOT ESP8266");
@@ -48,9 +50,13 @@ void setup()
                   WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET) ? "OK" : "FAILED");
     bool ap = WiFi.softAP(PORTAL_AP_SSID, PORTAL_AP_PASSWORD);
     Serial.printf("softAP: %s\n", ap ? "OK" : "FAILED");
-    if (!ap)
-        while (true)
-            delay(1000);
+    if (!ap) {
+        portalLedError();
+        while (true) {
+            portalLedUpdate();
+            delay(10);
+        }
+    }
 
     Serial.printf("AP IP: %s\n", WiFi.softAPIP().toString().c_str());
     Serial.printf("SSID: %s\n", WiFi.softAPSSID().c_str());
@@ -70,6 +76,7 @@ void setup()
     portalSetupRoutes(httpsServer);
     portalLogHeap("HTTPS ready");
     Serial.println("READY");
+    portalLedReady();
 }
 
 void loop()
@@ -77,5 +84,6 @@ void loop()
     dnsServer.processNextRequest();
     webServer.handleClient();
     httpsServer.handleClient();
+    portalLedUpdate();
     delay(2);
 }

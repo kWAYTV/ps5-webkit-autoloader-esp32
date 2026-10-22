@@ -2,6 +2,7 @@
 #include <DNSServer.h>
 #include "wifi_ap.h"
 #include "config.h"
+#include "led.h"
 
 static const IPAddress AP_IP(192, 168, 4, 1);
 static const IPAddress AP_GATEWAY(192, 168, 4, 1);
@@ -29,8 +30,11 @@ void portalStartAccessPoint()
     bool apResult = WiFi.softAP(PORTAL_AP_SSID, PORTAL_AP_PASSWORD);
     Serial.printf("softAP: %s\n", apResult ? "OK" : "FAILED");
     if (!apResult) {
-        while (true)
-            delay(1000);
+        portalLedError();
+        while (true) {
+            portalLedUpdate();
+            delay(10);
+        }
     }
 
     Serial.print("AP IP: ");

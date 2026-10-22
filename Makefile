@@ -13,13 +13,15 @@ HOST_PACKED_DIR := $(PROJECT_DIR)/host/packed
 PACK_DIR := $(PROJECT_DIR)/pack
 VENDOR_DIR := $(PROJECT_DIR)/vendor
 
-PORTAL_CONFIG := $(FIRMWARE_DIR)/portal/config.h
+PORTAL_DIR := $(FIRMWARE_DIR)/portal
+PORTAL_CONFIG := $(PORTAL_DIR)/config.h
+PORTAL_SOURCES := $(wildcard $(PORTAL_DIR)/*.h) $(wildcard $(PORTAL_DIR)/*.cpp)
 ESP32_SKETCH := $(ESP32_DIR)/$(PROJECT_NAME).ino
 ESP8266_SKETCH := $(ESP8266_DIR)/esp8266-arduino.ino
 ESP32_PARTITIONS := $(ESP32_DIR)/partitions.csv
 ESP32_PARTITIONS_8M := $(ESP32_DIR)/partitions-8m.csv
-ESP32_SKETCH_SOURCES := $(wildcard $(ESP32_DIR)/*.ino) $(wildcard $(ESP32_DIR)/*.h) $(wildcard $(ESP32_DIR)/*.cpp) $(PORTAL_CONFIG)
-ESP8266_SKETCH_SOURCES := $(wildcard $(ESP8266_DIR)/*.ino) $(wildcard $(ESP8266_DIR)/*.h) $(wildcard $(ESP8266_DIR)/*.cpp) $(PORTAL_CONFIG)
+ESP32_SKETCH_SOURCES := $(wildcard $(ESP32_DIR)/*.ino) $(wildcard $(ESP32_DIR)/*.h) $(wildcard $(ESP32_DIR)/*.cpp) $(PORTAL_SOURCES)
+ESP8266_SKETCH_SOURCES := $(wildcard $(ESP8266_DIR)/*.ino) $(wildcard $(ESP8266_DIR)/*.h) $(wildcard $(ESP8266_DIR)/*.cpp) $(PORTAL_SOURCES)
 DNS_PREPARER := $(FIRMWARE_DIR)/dns/prepare-dns-library.py
 
 BUILD_DIR := $(PROJECT_DIR)/build
@@ -67,14 +69,14 @@ LITTLEFS_TOOL := $(VENDOR_DIR)/mklittlefs/mklittlefs
 define stage-esp32-sketch
 	rm -rf "$(1)"
 	mkdir -p "$(1)"
-	cp "$(ESP32_DIR)"/*.ino "$(ESP32_DIR)"/*.h "$(ESP32_DIR)"/*.cpp "$(PORTAL_CONFIG)" "$(SERVER_HEADER)" "$(1)/"
+	cp "$(ESP32_DIR)"/*.ino "$(ESP32_DIR)"/*.h "$(ESP32_DIR)"/*.cpp "$(PORTAL_DIR)"/*.h "$(PORTAL_DIR)"/*.cpp "$(SERVER_HEADER)" "$(1)/"
 	cp "$(2)" "$(1)/partitions.csv"
 endef
 
 define stage-esp8266-sketch
 	rm -rf "$(1)" "$(ESP8266_BUILD_DIR)/output"
 	mkdir -p "$(1)" "$(ESP8266_BUILD_DIR)/output"
-	cp "$(ESP8266_DIR)"/*.ino "$(ESP8266_DIR)"/*.h "$(ESP8266_DIR)"/*.cpp "$(PORTAL_CONFIG)" "$(SERVER_HEADER)" "$(1)/"
+	cp "$(ESP8266_DIR)"/*.ino "$(ESP8266_DIR)"/*.h "$(ESP8266_DIR)"/*.cpp "$(PORTAL_DIR)"/*.h "$(PORTAL_DIR)"/*.cpp "$(SERVER_HEADER)" "$(1)/"
 endef
 
 define pad-merged
@@ -271,7 +273,6 @@ $(PICO_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS) Makefi
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(PICO_FQBN)" \
-	    --build-property "compiler.cpp.extra_flags=-DLED_PIN=10 -DLED_ON_LEVEL=HIGH" \
 	    --output-dir "$(PICO_BUILD_DIR)" \
 	    --build-property "build.partitions=partitions" \
 	    --build-property "build.filesystem=littlefs" \
@@ -284,7 +285,7 @@ $(S2_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS) Makefile
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(S2_FQBN)" \
-	    --build-property "compiler.cpp.extra_flags=-DLED_PIN=17 $(USB_DEBUG_FLAG)" \
+	    --build-property "compiler.cpp.extra_flags=$(USB_DEBUG_FLAG)" \
 	    $(S2_TLS_DEBUG_LINK) \
 	    --output-dir "$(S2_BUILD_DIR)" \
 	    --build-property "build.partitions=partitions" \
@@ -313,7 +314,6 @@ $(PICO_8M_APP): $(ESP32_SKETCH_SOURCES) $(SERVER_HEADER) $(ESP32_PARTITIONS_8M) 
 	$(ARDUINO_CLI) compile \
 	    $(DNS_LIBRARY_ARG) \
 	    --fqbn "$(PICO_8M_FQBN)" \
-	    --build-property "compiler.cpp.extra_flags=-DLED_PIN=10" \
 	    --output-dir "$(PICO_8M_OUTPUT_DIR)" \
 	    --build-property "build.partitions=partitions" \
 	    --build-property "build.filesystem=littlefs" \

@@ -3,6 +3,7 @@
 #include <LittleFS.h>
 #include "config.h"
 #include "host_files.h"
+#include "led.h"
 
 template <typename Server>
 static void portalNoCache(Server &server)
@@ -15,6 +16,7 @@ static void portalNoCache(Server &server)
 template <typename Server>
 static void portalLogRequest(Server &server)
 {
+    portalLedActivity();
     Serial.printf("[HTTP] %s %s", server.method() == HTTP_GET ? "GET" :
                   server.method() == HTTP_POST ? "POST" : "OTHER", server.uri().c_str());
     for (int i = 0; i < server.args(); i++)

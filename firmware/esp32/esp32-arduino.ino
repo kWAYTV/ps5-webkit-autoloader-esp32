@@ -49,6 +49,7 @@ void setup()
     Serial.println("Starting HTTPS Server");
     portalStartHttps();
     Serial.println("READY");
+    portalLedReady();
 }
 
 void loop()
