@@ -1,5 +1,5 @@
 import { FILES, CHIP_OF, LAST, CONNECT, WRITE, state, session, serialOk } from "./state.js";
-import { t } from "./i18n.js";
+import { t, pickLang } from "./i18n.js";
 import { setBar, clearLog, logLine, copyLog, fmtBytesLabel } from "./log.js";
 import { dropSession, openSession, loadFirmware, writeImage } from "./flash.js";
 
@@ -13,10 +13,11 @@ const caption = document.getElementById("caption");
 
 function readUrl() {
   const q = new URLSearchParams(location.search);
-  const lang = q.get("lang") === "es" || (!q.get("lang") && /^es\b/i.test(navigator.language || "")) ? "es" : "en";
+  const lang = pickLang(q.get("lang"), navigator.language || "");
   let step = Math.min(LAST, Math.max(0, Number(q.get("step") || 0) || 0));
   const board = CHIP_OF[q.get("board")] ? q.get("board") : "s2";
   state.lang = lang;
+  document.documentElement.lang = lang;
   state.board = board;
   state.flashed = sessionStorage.getItem("flashed") === "1";
   if (step >= WRITE && !state.connected && !state.flashed) step = CONNECT;
@@ -312,6 +313,9 @@ function renderStage() {
 }
 
 function render() {
+  document.documentElement.lang = state.lang;
+  const meta = document.querySelector('meta[name="description"]');
+  if (meta) meta.setAttribute("content", t("meta"));
   document.querySelector("[data-i18n=skip]").textContent = t("skip");
   document.querySelector("[data-i18n=source]").textContent = t("source");
   document.querySelector("[data-i18n=bins]").textContent = t("bins");

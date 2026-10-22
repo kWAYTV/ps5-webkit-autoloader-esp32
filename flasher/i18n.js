@@ -73,6 +73,7 @@ export const I = {
     wrote: "Wrote",
     verified: "Verified",
     badbin: "The firmware file is missing or not a binary. Wait for the site to finish updating, then reload.",
+    meta: "Write the PS5 WebKit Autoloader firmware to an ESP32, then join ESP32_PORTAL on the console and open the User’s Guide.",
   },
   es: {
     skip: "Saltar al paso",
@@ -146,9 +147,92 @@ export const I = {
     wrote: "Escritos",
     verified: "Verificado",
     badbin: "Falta el firmware o no es un binario. Espera a que el sitio termine de actualizar y recarga.",
+    meta: "Copia el firmware de PS5 WebKit Autoloader a un ESP32, únete a ESP32_PORTAL en la consola y abre la Guía del usuario.",
+  },
+  zh: {
+    skip: "跳到当前步骤",
+    source: "源码",
+    bins: "固件文件",
+    steps: ["浏览器", "板子", "下载模式", "端口", "写入", "Wi-Fi", "指南"],
+    stepsNav: "步骤",
+    of: "/",
+    next: "下一步",
+    back: "上一步",
+    again: "从头开始",
+    t0: "使用 Chrome 或 Edge",
+    p0: "这个页面通过 USB 线把固件写到 ESP32 上。只有 Chrome 或 Edge 能用。Firefox、Safari 和 PS5 浏览器打不开串口。",
+    ok0: "当前浏览器可以和板子通信。继续。",
+    no0: "用 Chrome 或 Edge 打开这个地址，然后再来。",
+    t1: "选择板子",
+    p1: "文件必须和金属屏蔽罩下面的芯片对上。TENSTAR ESP32-S2 Mini 选 ESP32-S2。如果印的是 ESP32-S3、ESP32-C3 或 ESP32，就选对应的。选错了不会启动。",
+    t2: "按住 BOOT，再插上",
+    p2: "芯片不在下载模式时会忽略写入。在要刷机的电脑上这样做：",
+    s2: [
+      "拔掉这台电脑上的 USB 线。",
+      "按住板子上的 BOOT 键。是标着 BOOT 的那个，不是 RESET。",
+      "按住 BOOT 的同时把线插回去。",
+      "再按两秒，然后松开。",
+    ],
+    n2: "线不要拔。下一步只是打开 USB 端口，还不会写入。",
+    t3: "选择 USB 端口",
+    p3: "Chrome 会问用哪个设备。选 ESP32。一般显示成 COM 口，或 “USB JTAG/serial debug unit”。",
+    n3: "如果列表是空的，退回去再进一次下载模式。这一步不会写固件。",
+    connect: "选择端口",
+    connecting: "正在打开端口…",
+    linked: "板子已响应。",
+    reconnect: "换一个端口",
+    t4: "写入固件",
+    p4: "这一步把镜像写进 flash。不要拔板子，也不要关这个标签页。",
+    n4: "写完后板子可能从 Windows 里消失。正常。这些镜像启动后会关掉 USB 串口。拔下来插到 PS5 上。",
+    write: "写入固件",
+    writing: "正在写入…",
+    t5: "在 PS5 上连上板子",
+    p5: "板子现在是一个名叫 ESP32_PORTAL 的 Wi-Fi 热点。PS5 必须连上它。这个网络没有互联网，也不需要。",
+    s5: [
+      "从这台电脑上拔下板子。",
+      "插到 PS5 的 USB 口上。一直插着。",
+      "在 PS5 上：设置 → 网络 → 设置互联网连接。加入 ESP32_PORTAL，密码 12345678。",
+      "留在这个网络上。“无互联网”提示是正常的。",
+    ],
+    n5: "Relapse 需要板子分配的 IP，所以要一直连着 ESP32_PORTAL。Poops 不需要网卡。",
+    t6: "打开用户指南",
+    p6: "让 PS5 留在 ESP32_PORTAL，板子不要拔。用户指南会从板子加载，不是从索尼。",
+    s6: [
+      "设置 → 指南和提示 → 用户指南。",
+      "等到页面加载完。第一次会把文件缓存到主机上。",
+      "应该会打开 Payload Manager。之后开机用 媒体 → WebKit Autoloader。",
+    ],
+    n6b: "poops 适用于 7.00–12.00。Relapse 适用于 7.00–13.60，但不包括 9.05 和 11.40。留在 ESP32_PORTAL。",
+    idle: "",
+    ready: "可以写入。",
+    fetch: "正在加载固件文件…",
+    sync: "正在等待芯片响应…",
+    chip: "芯片",
+    using: "镜像",
+    mismatch: "响应的芯片和你选的板子不一致。将写入已连接芯片对应的镜像。",
+    done: "写入完成。拔下板子，插到 PS5 上。",
+    fail: "失败了。按住 BOOT，重新插上，再选端口。",
+    abort: "没有选择端口。",
+    noport: "没有选择端口。",
+    native: "这是原生 USB。这条线没法复位板子。如果写入失败，请进入下载模式。",
+    copy: "复制",
+    copied: "已复制",
+    log: "日志",
+    wrote: "已写入",
+    verified: "已校验",
+    badbin: "固件文件缺失或不是二进制。等站点更新完，再刷新。",
+    meta: "把 PS5 WebKit Autoloader 固件写到 ESP32，然后在主机上加入 ESP32_PORTAL，打开用户指南。",
   },
 };
 
 export function t(key) {
-  return I[state.lang][key];
+  return I[state.lang]?.[key] ?? I.en[key];
+}
+
+export function pickLang(raw, nav) {
+  if (raw === "en" || raw === "es" || raw === "zh") return raw;
+  const n = nav || "";
+  if (/^es\b/i.test(n)) return "es";
+  if (/^zh\b/i.test(n)) return "zh";
+  return "en";
 }

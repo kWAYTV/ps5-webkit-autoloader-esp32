@@ -8,7 +8,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); }
 body {
-  font: 15px/1.55 ui-monospace, "Cascadia Mono", "Segoe UI Mono", "SF Mono", Consolas, monospace;
+  font: 15px/1.55 ui-monospace, "Cascadia Mono", "Segoe UI Mono", "SF Mono", Consolas, "Sarasa Mono SC", "Noto Sans Mono CJK SC", "Microsoft YaHei", "PingFang SC", sans-serif;
   padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
