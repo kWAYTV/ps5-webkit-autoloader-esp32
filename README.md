@@ -13,7 +13,7 @@ Poops is the default when both are valid.
 
 ## Flash
 
-Hold **BOOT**, plug into a PC, then use the [web flasher](https://percdotdev.github.io/ps5-webkit-autoloader-esp32/) (Chrome / Edge) or write the [latest](https://github.com/percdotdev/ps5-webkit-autoloader-esp32/releases/latest) merged bin at `0x0`. Every `main` build overwrites that same `latest` tag. GitHub will not list a new release.
+Hold **BOOT**, plug into a PC, then use the [web flasher](https://percdotdev.github.io/ps5-webkit-autoloader-esp32/) (Chrome / Edge) or write a [release](https://github.com/percdotdev/ps5-webkit-autoloader-esp32/releases/latest) merged bin at `0x0`. Same srbraboo version updates `latest`. A new version adds a release.
 
 | Board | Image |
 | --- | --- |
