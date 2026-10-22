@@ -64,7 +64,7 @@ Arduino-ESP32 **2.0.11** only. Use that core's `mklittlefs`, not 4.x. Images lan
 - [itsPLK/ps5-unified-autoloader](https://github.com/itsPLK/ps5-unified-autoloader)
 - [jordyidk/slopkit](https://github.com/jordyidk/slopkit)
 - [ntfargo/Relapse-Exploit](https://github.com/ntfargo/Relapse-Exploit)
-- [ESP Web Tools](https://esphome.github.io/esp-web-tools/)
+- [espressif/esptool-js](https://github.com/espressif/esptool-js)
 
 ## License
 
