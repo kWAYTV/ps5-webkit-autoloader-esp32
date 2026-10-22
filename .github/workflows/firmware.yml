@@ -7,7 +7,6 @@ on:
       - firmware/**
       - host/**
       - pack/**
-      - flasher/**
       - vendor/**
       - Makefile
       - install-deps.sh
@@ -18,7 +17,6 @@ on:
       - firmware/**
       - host/**
       - pack/**
-      - flasher/**
       - vendor/**
       - Makefile
       - install-deps.sh
@@ -31,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  firmware:
+  prepare:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -45,6 +43,15 @@ jobs:
           repository: srbraboo/ps5-webkit-autoloader
           path: webkit-autoloader
           submodules: recursive
+
+      - name: Cache Arduino cores
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15-esp32-2
+            ~/.arduino15/staging
+            ~/.arduino15/arduino-cli-esp32-2.yaml
+          key: arduino-esp32-2.0.11-8266-3.1.2
 
       - name: Install dependencies
         run: ./install-deps.sh
@@ -61,22 +68,63 @@ jobs:
       - name: Pack srbraboo payload
         run: bash ./pack/pack_srbraboo.sh
 
-      - name: Build firmware
-        run: make
+      - name: Build shared image
+        run: make common
 
-      - name: Upload merged bins
+      - name: Upload common
         uses: actions/upload-artifact@v4
         with:
-          name: esp32-srbraboo-bins
+          name: firmware-common
           path: |
-            build/pico/esp32-arduino.pico.merged.bin
-            build/s2/esp32-arduino.s2.merged.bin
-            build/s3/esp32-arduino.s3.merged.bin
-            build/c3/esp32-arduino.c3.merged.bin
+            build/tls/server_certs.h
+            build/dns-library
+            build/common/esp32-arduino.littlefs.bin
             payload-version.txt
 
+  compile:
+    needs: prepare
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [pico, s2, s3, c3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache Arduino cores
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15-esp32-2
+            ~/.arduino15/staging
+            ~/.arduino15/arduino-cli-esp32-2.yaml
+          key: arduino-esp32-2.0.11-8266-3.1.2
+
+      - name: Install compile tools
+        run: COMPILE_ONLY=1 ./install-deps.sh
+
+      - name: Build mklittlefs
+        run: make -C vendor/mklittlefs
+
+      - name: Download common
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-common
+
+      - name: Compile ${{ matrix.board }}
+        run: make ${{ matrix.board }} REUSE_FS=1
+
+      - name: Upload ${{ matrix.board }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.board }}
+          path: build/${{ matrix.board }}/esp32-arduino.${{ matrix.board }}.merged.bin
+
   release:
-    needs: firmware
+    needs: [prepare, compile]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
     permissions:
@@ -85,17 +133,24 @@ jobs:
       - name: Download bins
         uses: actions/download-artifact@v4
         with:
-          name: esp32-srbraboo-bins
+          pattern: bin-*
+          merge-multiple: true
           path: bins
 
-      - name: Publish latest release
+      - name: Download payload version
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-common
+          path: common
+
+      - name: Publish releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           mkdir -p release
           find bins -name '*.merged.bin' -exec cp -f {} release/ \;
-          PAYLOAD="$(tr -d '[:space:]' < bins/payload-version.txt 2>/dev/null || echo unknown)"
+          PAYLOAD="$(tr -d '[:space:]' < common/payload-version.txt 2>/dev/null || echo unknown)"
           VER="${PAYLOAD%%(*}"
           VER="${VER:-unknown}"
           TITLE="srbraboo ${PAYLOAD}"
@@ -116,41 +171,3 @@ jobs:
           }
           publish "$VER"
           publish latest
-
-  pages:
-    needs: [firmware, release]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-22.04
-    permissions:
-      pages: write
-      id-token: write
-    concurrency:
-      group: pages
-      cancel-in-progress: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - name: Checkout site
-        uses: actions/checkout@v4
-
-      - name: Download bins
-        uses: actions/download-artifact@v4
-        with:
-          name: esp32-srbraboo-bins
-          path: bins
-
-      - name: Stage Pages
-        run: |
-          mkdir -p flasher/firmware
-          find bins -name '*.merged.bin' -exec cp -f {} flasher/firmware/ \;
-          ls -lh flasher/firmware
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: flasher
-
-      - name: Deploy Pages
-        id: deploy
-        uses: actions/deploy-pages@v4

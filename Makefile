@@ -1,7 +1,6 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -e -o pipefail -c
 .ONESHELL:
-.NOTPARALLEL:
 .DEFAULT_GOAL := all
 
 PROJECT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
@@ -164,12 +163,15 @@ ESP8266_FLASH_SIZE := 4194304
 ESP8266_LITTLEFS_SIZE := 0x2FA000
 ESP8266_LITTLEFS_OFFSET := 0x100000
 
-.PHONY: all debug debug-s2 pico pico-8m s2 s3 c3 8266 littlefs datadir minimize check check-minimize check-data check-littlefs check-8266 clean FORCE
+.PHONY: all common debug debug-s2 pico pico-8m s2 s3 c3 8266 littlefs datadir minimize check check-minimize check-data check-littlefs check-8266 clean FORCE
 
 all: check $(PICO_MERGED) $(S2_MERGED) $(S3_MERGED) $(C3_MERGED)
 	@echo
 	echo "Build complete:"
 	ls -lh "$(PICO_MERGED)" "$(S2_MERGED)" $(S3_MERGED) $(C3_MERGED) "$(LITTLEFS_IMAGE)"
+
+common: check $(SERVER_HEADER) $(DNS_LIBRARY_STAMP) $(LITTLEFS_IMAGE)
+	@ls -lh "$(SERVER_HEADER)" "$(LITTLEFS_IMAGE)"
 
 debug:
 	@$(MAKE) USB_DEBUG=1 BUILD_DIR="$(PROJECT_DIR)/build/debug" all
@@ -346,6 +348,10 @@ $(ESP8266_MERGED): $(ESP8266_APP) $(ESP8266_LITTLEFS_IMAGE)
 	@python3 "$(ESP8266_ESPTOOL)" --chip esp8266 merge_bin -o "$(ESP8266_MERGED)" --flash_mode dout --flash_freq 40m --flash_size 4MB 0x0000 "$(ESP8266_APP)" "$(ESP8266_LITTLEFS_OFFSET)" "$(ESP8266_LITTLEFS_IMAGE)"
 	$(call pad-merged,$(ESP8266_MERGED),$(ESP8266_FLASH_SIZE),ESP8266 image,4 MB)
 
+ifeq ($(REUSE_FS),1)
+$(LITTLEFS_IMAGE):
+	@test -f "$(LITTLEFS_IMAGE)" || { echo "Error: $(LITTLEFS_IMAGE) is missing" >&2; exit 1; }
+else
 $(LITTLEFS_IMAGE): datadir
 	@echo
 	echo "Creating shared LittleFS image..."
@@ -356,6 +362,7 @@ $(LITTLEFS_IMAGE): datadir
 	    -b 4096 \
 	    -s "$(LITTLEFS_SIZE)" \
 	    "$(LITTLEFS_IMAGE)"
+endif
 
 $(PICO_MERGED): $(PICO_APP) $(LITTLEFS_IMAGE)
 	@$(call merge-esp32-image,esp32,$(PICO_MERGED),40m,4MB,0x1000,$(PICO_BOOTLOADER),$(PICO_PARTITIONS),$(PICO_APP),$(LITTLEFS_OFFSET),$(LITTLEFS_IMAGE),$(FLASH_SIZE),Pico image)

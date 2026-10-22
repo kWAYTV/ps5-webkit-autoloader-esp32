@@ -18,23 +18,33 @@ else
 fi
 
 $SUDO apt-get update
-$SUDO apt-get install -y \
-    ca-certificates \
-    curl \
-    git \
-    jq \
-    nodejs \
-    npm \
-    openssl \
-    python3 \
-    unzip \
-    xz-utils
-
-$SUDO npm install --global \
-    clean-css-cli \
-    html-minifier-terser \
-    svgo \
-    terser
+if [ "${COMPILE_ONLY:-0}" = 1 ]; then
+    $SUDO apt-get install -y \
+        ca-certificates \
+        curl \
+        git \
+        openssl \
+        python3 \
+        unzip \
+        xz-utils
+else
+    $SUDO apt-get install -y \
+        ca-certificates \
+        curl \
+        git \
+        jq \
+        nodejs \
+        npm \
+        openssl \
+        python3 \
+        unzip \
+        xz-utils
+    $SUDO npm install --global \
+        clean-css-cli \
+        html-minifier-terser \
+        svgo \
+        terser
+fi
 
 if ! command -v arduino-cli >/dev/null 2>&1; then
     TMP_DIR="$(mktemp -d)"
