@@ -12,6 +12,7 @@ __pycache__/
 *.bak
 /slopkit.*
 /autoloader-externalize-backup/
+/host/packed-externalize-backup/
 /*.mini/
 /henloader/
 replace_autoloader_elf.py

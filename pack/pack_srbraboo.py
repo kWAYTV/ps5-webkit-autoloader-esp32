@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage srbraboo/ps5-webkit-autoloader pages into the ESP32 autoloader/ tree.
+"""Stage srbraboo/ps5-webkit-autoloader pages into host/packed.
 
 Keeps the ESP32 split-AppCache installer shells (the chip cannot inject
 manifest= from ?exploit= like the PC host). Replaces the chain HTML and
@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WEB = ROOT / "webkit-autoloader"
-DEFAULT_OUT = ROOT / "autoloader"
+DEFAULT_OUT = ROOT / "host" / "packed"
 
 
 def run(cmd: list[str], cwd: Path) -> None:
@@ -137,9 +137,9 @@ def main() -> int:
         logo = web / "assets" / "icon.svg"
     shutil.copy2(logo, out / "logo.svg")
 
-    shells = ROOT / "autoloader-shells"
+    shells = ROOT / "host" / "installer"
     if not shells.is_dir():
-        shells = ROOT / "autoloader"
+        shells = ROOT / "host" / "packed"
     for name in ("index.html", "slopkit_cache.html", "relapse_cache.html"):
         text = (shells / name).read_text(encoding="utf-8")
         (out / name).write_text(
@@ -170,7 +170,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    run([sys.executable, str(ROOT / "externalize_autoloader.py"), str(out)], cwd=ROOT)
+    run([sys.executable, str(ROOT / "pack" / "externalize_autoloader.py"), str(out)], cwd=ROOT)
     print(f"Packed {out} version={version} app_dir={app_dir}")
     return 0
 

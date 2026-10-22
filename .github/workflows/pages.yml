@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - docs/**
+      - flasher/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -32,17 +32,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          mkdir -p docs/firmware
+          mkdir -p flasher/firmware
           gh release download latest \
             --repo "${{ github.repository }}" \
             --pattern '*.merged.bin' \
-            --dir docs/firmware
-          ls -lh docs/firmware
+            --dir flasher/firmware
+          ls -lh flasher/firmware
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: flasher
 
       - name: Deploy Pages
         id: deploy
