@@ -15,12 +15,14 @@ Poops is the default when both are valid.
 
 Hold **BOOT**, plug into a PC, then use the [web flasher](https://percdotdev.github.io/ps5-webkit-autoloader-esp32/) (Chrome / Edge) or write a [release](https://github.com/percdotdev/ps5-webkit-autoloader-esp32/releases/latest) merged bin at `0x0`. Same srbraboo version updates `latest`. A new version adds a release.
 
-| Board | Image |
-| --- | --- |
-| ESP32-S2 | `esp32-arduino.s2.merged.bin` |
-| ESP32-S3 | `esp32-arduino.s3.merged.bin` |
-| ESP32-PICO | `esp32-arduino.pico.merged.bin` |
-| ESP32-C3 | `esp32-arduino.c3.merged.bin` |
+| Board | Image | LED |
+| --- | --- | --- |
+| ESP32-S2 | `esp32-arduino.s2.merged.bin` | GPIO 15 |
+| ESP32-S3 | `esp32-arduino.s3.merged.bin` | GPIO 21 |
+| ESP32-PICO | `esp32-arduino.pico.merged.bin` | GPIO 10 |
+| ESP32-C3 | `esp32-arduino.c3.merged.bin` | GPIO 8 |
+
+Solid on boot. Heartbeat when ready. Flash on HTTP. Fast blink if the AP fails.
 
 Release images drop native USB after boot. Move the board to the PS5.
 
